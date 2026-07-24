@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   ARKANA design tokens
+   Warm neutral base (bone / linen), tan mid-tones, antique gold accent, and a
+   deep graphite for contrast. Deliberately committed to a single light-warm
+   look — this is brand surface, not an app chrome.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-bone: #f7f4ef;
+  --color-linen: #efe9e0;
+  --color-parchment: #e6ddd0;
+
+  --color-sand: #d6c6ae;
+  --color-tan: #bca384;
+  --color-clay: #9a8264;
+
+  --color-gold: #b08d4f;
+  --color-gold-soft: #d4b472;
+  --color-gold-deep: #8a6d3a;
+
+  --color-graphite: #26262a;
+  --color-slate: #4d4d52;
+  --color-ash: #8a8a90;
+  --color-mist: #b9b6b1;
+
+  --font-display: var(--font-cormorant), ui-serif, Georgia, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --tracking-brand: 0.34em;
+
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-bone);
+    color: var(--color-graphite);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--color-sand);
+    color: var(--color-graphite);
+  }
+
+  /* Keep focus rings visible but on-brand. */
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Small caps label used above section headings and on buttons. */
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  /* The hairline gold rule that separates major sections. */
+  .rule-gold {
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--color-tan) 20%,
+      var(--color-tan) 80%,
+      transparent
+    );
+    height: 1px;
+  }
+
+  /* Understated link underline that grows from the left on hover. */
+  .link-underline {
+    background-image: linear-gradient(var(--color-gold), var(--color-gold));
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    transition: background-size 0.4s var(--ease-soft);
+  }
+  .link-underline:hover {
+    background-size: 100% 1px;
+  }
+}
+
+/* Entrance animation for hero + section reveals. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.9s var(--ease-soft) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}

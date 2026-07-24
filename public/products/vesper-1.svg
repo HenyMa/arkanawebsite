@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Hoodie">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dccbb1"/>
+      <stop offset="100%" stop-color="#bca384"/>
+    </linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#f2ece3"/>
+      <stop offset="100%" stop-color="#f2ece3" stop-opacity="0.55"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg)"/>
+  <ellipse cx="400" cy="815" rx="235" ry="26" fill="#000" opacity="0.06"/>
+  <g>
+    <path d="M330 300 C320 240 340 190 400 185 C460 190 480 240 470 300
+             L560 330 C610 348 640 380 655 430 L700 630 L610 662 L565 484
+             L558 782 C558 796 548 802 535 802 L265 802 C252 802 242 796 242 782
+             L235 484 L190 662 L100 630 L145 430 C160 380 190 348 240 330 Z"
+          fill="url(#g)"/>
+    <path d="M336 300 C352 330 372 344 400 344 C428 344 448 330 464 300
+             C452 286 428 278 400 278 C372 278 348 286 336 300 Z"
+          fill="#000" opacity="0.28"/>
+    <path d="M300 560 L500 560 L500 690 L300 690 Z" fill="#000" opacity="0.05"/>
+    <path d="M300 560 L500 560" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>
+    <path d="M368 320 L360 400" stroke="#8a6d3a" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+    <path d="M432 320 L440 400" stroke="#8a6d3a" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="500" cy="420" r="15" fill="none" stroke="#8a6d3a" stroke-width="2.5"/>
+    <path d="M500 409 L509 427 L491 427 Z" fill="#8a6d3a"/>
+  </g>
+</svg>
