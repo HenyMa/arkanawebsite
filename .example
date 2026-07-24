@@ -4,13 +4,13 @@
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 # --- Supabase --------------------------------------------------------------
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+##NEXT_PUBLIC_SUPABASE_URL=
+##NEXT_PUBLIC_SUPABASE_ANON_KEY=
 # Server-only. Never prefix with NEXT_PUBLIC_.
-SUPABASE_SERVICE_ROLE_KEY=
+##SUPABASE_SERVICE_ROLE_KEY=
 
 # --- Stripe ----------------------------------------------------------------
 # Dashboard -> Developers -> API keys
-STRIPE_SECRET_KEY=
+##STRIPE_SECRET_KEY=
 # From `stripe listen` locally, or Dashboard -> Developers -> Webhooks in prod.
-STRIPE_WEBHOOK_SECRET=
+##STRIPE_WEBHOOK_SECRET=
