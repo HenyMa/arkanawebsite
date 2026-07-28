@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Sweatshirt">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dbcdb5"/>
+      <stop offset="100%" stop-color="#bfae91"/>
+    </linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#efe9e0"/>
+      <stop offset="100%" stop-color="#efe9e0" stop-opacity="0.55"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg)"/>
+  <ellipse cx="400" cy="815" rx="235" ry="26" fill="#000" opacity="0.06"/>
+  <g>
+    <path d="M332 304 C342 290 362 282 400 282 C438 282 458 290 468 304
+             L560 330 C610 348 640 380 655 430 L700 630 L610 662 L565 484
+             L558 782 C558 796 548 802 535 802 L265 802 C252 802 242 796 242 782
+             L235 484 L190 662 L100 630 L145 430 C160 380 190 348 240 330 Z"
+          fill="url(#g)"/>
+    <path d="M332 304 C342 290 362 282 400 282 C438 282 458 290 468 304
+             C456 324 432 333 400 333 C368 333 344 324 332 304 Z"
+          fill="#000" opacity="0.22"/>
+    <path d="M340 306 C354 320 374 327 400 327 C426 327 446 320 460 306"
+          fill="none" stroke="#000" stroke-opacity="0.18" stroke-width="3"/>
+    <path d="M300 560 L500 560 L500 690 L300 690 Z" fill="#000" opacity="0.05"/>
+    <path d="M300 560 L500 560" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>
+    <path d="M242 782 L558 782" stroke="#000" stroke-opacity="0.14" stroke-width="3"/>
+    <circle cx="500" cy="420" r="15" fill="none" stroke="#3a3a42" stroke-width="2.5"/>
+    <path d="M500 409 L509 427 L491 427 Z" fill="#3a3a42"/>
+  </g>
+</svg>

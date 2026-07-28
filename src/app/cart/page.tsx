@@ -5,12 +5,15 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button, ButtonLink } from "@/components/Button";
 import { useCart } from "@/lib/cart";
-import { formatPrice } from "@/lib/products";
-import { FREE_STANDARD_THRESHOLD_CENTS, SHIPPING_SUMMARY } from "@/lib/shipping";
-import { POINTS_PER_DOLLAR } from "@/lib/rewards";
+import { useSignedIn } from "@/lib/useSignedIn";
+import { formatPrice, productPathBySlug } from "@/lib/products";
+import { SHIPPING_SUMMARY } from "@/lib/shipping";
+import { POINTS_PER_DOLLAR, WELCOME_DISCOUNT_PERCENT } from "@/lib/rewards";
+import { RETURN_WINDOW_DAYS } from "@/lib/returns";
 
 export default function CartPage() {
   const { resolved, subtotalCents, setQuantity, remove, ready } = useCart();
+  const { signedIn } = useSignedIn();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,16 +59,16 @@ export default function CartPage() {
           Your cart is empty
         </h1>
         <p className="mt-4 text-sm text-slate">
-          Three hoodies, made in small batches. Start there.
+          Hoodies, sweatshirts, sweatpants, and zip-ups — made in small batches.
+          Start there.
         </p>
-        <ButtonLink href="/hoodies" className="mt-9">
-          Shop hoodies
+        <ButtonLink href="/shop" className="mt-9">
+          Shop the collection
         </ButtonLink>
       </div>
     );
   }
 
-  const remainingForFree = FREE_STANDARD_THRESHOLD_CENTS - subtotalCents;
   const pointsEarned = Math.floor((subtotalCents / 100) * POINTS_PER_DOLLAR);
 
   return (
@@ -80,7 +83,7 @@ export default function CartPage() {
           {resolved.map((line) => (
             <li key={`${line.slug}-${line.size}`} className="flex gap-6 py-7">
               <Link
-                href={`/hoodies/${line.slug}`}
+                href={productPathBySlug(line.slug)}
                 className="relative aspect-[4/5] w-24 shrink-0 overflow-hidden bg-linen sm:w-28"
               >
                 <Image
@@ -96,7 +99,7 @@ export default function CartPage() {
                 <div className="flex justify-between gap-4">
                   <div>
                     <Link
-                      href={`/hoodies/${line.slug}`}
+                      href={productPathBySlug(line.slug)}
                       className="font-display text-xl text-graphite"
                     >
                       {line.name}
@@ -162,27 +165,29 @@ export default function CartPage() {
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate">Shipping</dt>
-              <dd className="text-ash">Calculated at checkout</dd>
+              <dt className="text-slate">Standard shipping</dt>
+              <dd className="text-gold-deep">Free</dd>
             </div>
           </dl>
 
-          {remainingForFree > 0 ? (
-            <p className="mt-5 border-t border-parchment pt-5 text-xs text-slate">
-              Add {formatPrice(remainingForFree)} for complimentary standard
-              shipping.
-            </p>
-          ) : (
-            <p className="mt-5 border-t border-parchment pt-5 text-xs text-gold-deep">
-              Complimentary standard shipping applied.
-            </p>
-          )}
+          {/* The discount is applied by the checkout route, which is the only
+              place that can tell whether this member is still eligible. */}
+          <p className="mt-5 border-t border-parchment pt-5 text-xs leading-relaxed text-slate">
+            Members take {WELCOME_DISCOUNT_PERCENT}% off their first order — it
+            comes off at checkout automatically.
+            {!signedIn && (
+              <>
+                {" "}
+                <Link href="/signup" className="link-underline text-gold-deep">
+                  Join the Circle
+                </Link>
+                .
+              </>
+            )}
+          </p>
 
           <p className="mt-2 text-xs text-ash">
-            Earns {pointsEarned} points ·{" "}
-            <Link href="/rewards" className="link-underline text-gold-deep">
-              join the Circle
-            </Link>
+            Earns {pointsEarned} points before any discount
           </p>
 
           <Button onClick={checkout} disabled={busy} className="mt-7 w-full">
@@ -199,6 +204,12 @@ export default function CartPage() {
             {SHIPPING_SUMMARY.map((line) => (
               <li key={line}>{line}</li>
             ))}
+            <li>
+              Free returns within {RETURN_WINDOW_DAYS} days ·{" "}
+              <Link href="/shipping" className="link-underline text-slate">
+                how it works
+              </Link>
+            </li>
           </ul>
         </aside>
       </div>

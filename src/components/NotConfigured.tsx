@@ -19,7 +19,7 @@ export function NotConfigured({
         {title}
       </h1>
       <p className="mt-4 text-sm leading-relaxed text-slate">{body}</p>
-      <ButtonLink href="/hoodies" variant="outline" className="mt-9">
+      <ButtonLink href="/shop" variant="outline" className="mt-9">
         Back to the collection
       </ButtonLink>
     </div>

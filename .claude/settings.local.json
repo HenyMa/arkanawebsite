@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm --version)"
+      "Bash(npm --version)",
+      "Bash(node /Users/henyma/.claude/jobs/4e01def7/tmp/gen-svgs.mjs)",
+      "Bash(qlmanage -t -s 500 -o /Users/henyma/.claude/jobs/4e01def7/tmp/preview meridian-1.svg monolith-pant-1.svg threshold-1.svg)",
+      "Bash(python3 -)",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(pkill -f \"next-server\")",
+      "Bash(npm run *)"
     ]
   }
 }

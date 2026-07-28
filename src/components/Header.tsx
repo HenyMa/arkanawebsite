@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart";
-import { createClient } from "@/lib/supabase/client";
+import { useSignedIn } from "@/lib/useSignedIn";
+import { WELCOME_DISCOUNT_PERCENT } from "@/lib/rewards";
 import { Mark, Wordmark } from "./Logo";
+import { SearchOverlay } from "./SearchOverlay";
 
 const NAV = [
-  { href: "/hoodies", label: "Hoodies" },
+  { href: "/shop", label: "Shop" },
   { href: "/rewards", label: "The Circle" },
   { href: "/about", label: "About" },
 ];
@@ -16,21 +18,10 @@ const NAV = [
 export function Header() {
   const { count, ready } = useCart();
   const pathname = usePathname();
-  const [signedIn, setSignedIn] = useState(false);
+  // Tracks auth so the account link reflects state without a full reload.
+  const { signedIn } = useSignedIn();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-
-  // Track auth so the account link reflects state without a full reload.
-  useEffect(() => {
-    const supabase = createClient();
-    if (!supabase) return;
-
-    supabase.auth.getUser().then(({ data }) => setSignedIn(Boolean(data.user)));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
-      setSignedIn(Boolean(session?.user)),
-    );
-    return () => sub.subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -46,7 +37,8 @@ export function Header() {
     <header className="sticky top-0 z-50">
       <div className="bg-graphite text-center text-[0.7rem] tracking-[0.18em] text-sand/90 uppercase">
         <p className="px-4 py-2.5">
-          Complimentary standard shipping over $200 ·{" "}
+          Free shipping on every order · Members get{" "}
+          {WELCOME_DISCOUNT_PERCENT}% off their first ·{" "}
           <Link href="/rewards" className="text-gold-soft link-underline">
             Join the Arkana Circle
           </Link>
@@ -107,6 +99,7 @@ export function Header() {
           </Link>
 
           <div className="flex flex-1 items-center justify-end gap-4 sm:gap-6">
+            <SearchOverlay />
             <Link
               href={signedIn ? "/account" : "/login"}
               className="eyebrow link-underline whitespace-nowrap pb-0.5 text-slate transition-colors hover:text-graphite"

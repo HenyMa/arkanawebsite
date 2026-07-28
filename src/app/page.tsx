@@ -1,9 +1,16 @@
 import Image from "next/image";
+import Link from "next/link";
 import { ButtonLink } from "@/components/Button";
+import { JoinCircleLink } from "@/components/JoinCircleLink";
 import { ProductCard } from "@/components/ProductCard";
 import { Mark } from "@/components/Logo";
-import { PRODUCTS } from "@/lib/products";
-import { SIGNUP_BONUS, TIERS } from "@/lib/rewards";
+import {
+  CATEGORIES,
+  PRODUCTS,
+  categoryPath,
+  formatPrice,
+} from "@/lib/products";
+import { SIGNUP_BONUS, TIERS, WELCOME_DISCOUNT_PERCENT } from "@/lib/rewards";
 
 export default function HomePage() {
   return (
@@ -18,10 +25,10 @@ export default function HomePage() {
           }}
           aria-hidden="true"
         />
-        <div className="relative mx-auto max-w-4xl px-5 py-28 text-center sm:px-8 sm:py-36">
+        <div className="relative mx-auto max-w-4xl px-5 py-28 text-center sm:px-8 sm:py-8">
           <Mark className="animate-rise mx-auto h-11 w-11 text-gold" />
           <p className="eyebrow animate-rise mt-8 text-clay [animation-delay:80ms]">
-            Autumn Collection · Made in Portugal
+            Luxury You Deserve · Valued Crafts
           </p>
           <h1 className="animate-rise mt-6 font-display text-5xl font-light leading-[1.08] text-graphite [animation-delay:160ms] sm:text-7xl">
             Fewer pieces,
@@ -29,11 +36,11 @@ export default function HomePage() {
             <span className="italic text-gold-deep">made properly.</span>
           </h1>
           <p className="animate-rise mx-auto mt-8 max-w-lg text-[0.95rem] leading-relaxed text-slate [animation-delay:240ms]">
-            Arkana begins with three hoodies. Heavyweight cotton, garment-dyed in
-            small batches, cut to hold its shape for years rather than seasons.
+            Heavyweight cotton, garment-dyed in small batches, cut to hold its
+            shape for years rather than seasons. Free shipping on everything.
           </p>
           <div className="animate-rise mt-11 flex flex-wrap justify-center gap-4 [animation-delay:320ms]">
-            <ButtonLink href="/hoodies">Shop hoodies</ButtonLink>
+            <ButtonLink href="/shop">Shop the collection</ButtonLink>
             <ButtonLink href="/rewards" variant="outline">
               The Arkana Circle
             </ButtonLink>
@@ -47,18 +54,39 @@ export default function HomePage() {
           <div>
             <p className="eyebrow text-clay">The Collection</p>
             <h2 className="mt-3 font-display text-4xl font-light text-graphite sm:text-5xl">
-              Hoodies
+              Four things, made well
             </h2>
           </div>
           <p className="max-w-sm text-sm leading-relaxed text-slate">
-            Three weights, three colourways. Each one dyed after construction so
-            the colour settles into the seams.
+            One price per garment, dyed after construction so the colour settles
+            into the seams. No sales, no seasons, no maths at checkout.
           </p>
         </div>
 
         <div className="rule-gold mt-10" />
 
-        <div className="mt-12 grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid gap-px border border-parchment bg-parchment sm:grid-cols-2 lg:grid-cols-4">
+          {CATEGORIES.map((category) => (
+            <Link
+              key={category.slug}
+              href={categoryPath(category.slug)}
+              className="bg-bone px-6 py-7 transition-colors hover:bg-linen"
+            >
+              <p className="font-display text-2xl text-graphite">
+                {category.name}
+              </p>
+              <p className="mt-2 text-sm tabular-nums text-gold-deep">
+                {formatPrice(category.priceCents)}
+              </p>
+              <p className="mt-3 text-xs leading-relaxed text-ash">
+                {category.tagline}
+              </p>
+            </Link>
+          ))}
+        </div>
+
+        {/* The whole range fits on one row — no "see more" to promise. */}
+        <div className="mt-14 grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
           {PRODUCTS.map((product) => (
             <ProductCard key={product.slug} product={product} />
           ))}
@@ -116,8 +144,9 @@ export default function HomePage() {
           </h2>
           <p className="mx-auto mt-6 max-w-xl text-[0.95rem] leading-relaxed text-mist">
             Create an account and we&apos;ll credit you {SIGNUP_BONUS} points on
-            the spot. Earn on every order, unlock free shipping, and get first
-            access to limited runs before they&apos;re announced.
+            the spot, plus {WELCOME_DISCOUNT_PERCENT}% off your first order. Earn
+            on every order after that, and get first access to limited runs
+            before they&apos;re announced.
           </p>
 
           <div className="mt-14 grid gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-3">
@@ -137,17 +166,13 @@ export default function HomePage() {
           </div>
 
           <div className="mt-12 flex flex-wrap justify-center gap-4">
-            <ButtonLink
-              href="/signup"
-              className="bg-gold text-graphite hover:bg-gold-soft"
+            <JoinCircleLink
+              variant="primaryOnDark"
+              memberLabel="View your standing"
             >
               Join the Circle
-            </ButtonLink>
-            <ButtonLink
-              href="/rewards"
-              variant="outline"
-              className="border-white/25 text-bone hover:border-gold-soft hover:bg-white/5"
-            >
+            </JoinCircleLink>
+            <ButtonLink href="/rewards" variant="outlineOnDark">
               How it works
             </ButtonLink>
           </div>

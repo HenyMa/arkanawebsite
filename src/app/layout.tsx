@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Inter } from "next/font/google";
 import { CartProvider } from "@/lib/cart";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -25,11 +26,11 @@ export const metadata: Metadata = {
     template: "%s · Arkana",
   },
   description:
-    "Arkana makes heavyweight hoodies in small batches: garment-dyed cotton, quiet detailing, made in Portugal.",
+    "Arkana makes heavyweight hoodies, sweatshirts, sweatpants, and zip-ups in small batches: garment-dyed cotton, quiet detailing, made in Portugal. Free shipping on every order.",
   openGraph: {
     title: "Arkana — Considered essentials",
     description:
-      "Heavyweight hoodies in small batches. Garment-dyed cotton, quiet detailing, made in Portugal.",
+      "Heavyweight essentials in small batches. Garment-dyed cotton, quiet detailing, made in Portugal.",
     type: "website",
   },
 };

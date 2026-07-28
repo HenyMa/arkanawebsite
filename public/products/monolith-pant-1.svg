@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Sweatpant">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a3a42"/>
+      <stop offset="100%" stop-color="#26262a"/>
+    </linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#efe9e0"/>
+      <stop offset="100%" stop-color="#efe9e0" stop-opacity="0.55"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg)"/>
+  <ellipse cx="400" cy="880" rx="200" ry="24" fill="#000" opacity="0.06"/>
+  <g>
+    <path d="M262 210 L538 210 L546 430 L534 862 L440 862 L426 566 L400 470
+             L374 566 L360 862 L266 862 L254 430 Z"
+          fill="url(#g)"/>
+    <path d="M262 210 L538 210 L541 286 L259 286 Z" fill="#000" opacity="0.18"/>
+    <g stroke="#000" stroke-opacity="0.12" stroke-width="2">
+      <path d="M290 210 L290 286"/><path d="M330 210 L330 286"/>
+      <path d="M370 210 L370 286"/><path d="M410 210 L410 286"/>
+      <path d="M450 210 L450 286"/><path d="M490 210 L490 286"/>
+    </g>
+    <path d="M400 286 L400 470" stroke="#000" stroke-opacity="0.14" stroke-width="2.5"/>
+    <path d="M366 258 C380 276 380 300 372 322" fill="none" stroke="#c9a463"
+          stroke-width="5" stroke-linecap="round"/>
+    <path d="M434 258 C420 276 420 300 428 322" fill="none" stroke="#c9a463"
+          stroke-width="5" stroke-linecap="round"/>
+    <path d="M282 330 C296 356 302 384 300 414" fill="none" stroke="#000"
+          stroke-opacity="0.14" stroke-width="3"/>
+    <path d="M518 330 C504 356 498 384 500 414" fill="none" stroke="#000"
+          stroke-opacity="0.14" stroke-width="3"/>
+    <path d="M266 862 L360 862" stroke="#000" stroke-opacity="0.16" stroke-width="4"/>
+    <path d="M440 862 L534 862" stroke="#000" stroke-opacity="0.16" stroke-width="4"/>
+    <circle cx="486" cy="380" r="13" fill="none" stroke="#c9a463" stroke-width="2.5"/>
+    <path d="M486 371 L494 387 L478 387 Z" fill="#c9a463"/>
+  </g>
+</svg>

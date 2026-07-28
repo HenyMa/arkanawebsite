@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
-import { ButtonLink } from "@/components/Button";
+import { BuyMembershipButton } from "@/components/BuyMembershipButton";
+import { JoinCircleLink } from "@/components/JoinCircleLink";
 import { Mark } from "@/components/Logo";
 import {
+  MEMBER_DISCOUNT_PERCENT,
+  MEMBERSHIP_PRICE_CENTS,
   POINTS_PER_DOLLAR,
   REDEMPTION_THRESHOLD,
   REDEMPTION_VALUE_CENTS,
   SIGNUP_BONUS,
   TIERS,
+  WELCOME_DISCOUNT_PERCENT,
+  isPurchasableTier,
 } from "@/lib/rewards";
 import { formatPrice } from "@/lib/products";
+import {
+  EXTENDED_RETURN_WINDOW_DAYS,
+  RETURN_WINDOW_DAYS,
+} from "@/lib/returns";
 
 export const metadata: Metadata = {
   title: "The Arkana Circle",
@@ -24,11 +33,16 @@ const STEPS = [
   },
   {
     n: "02",
+    title: "Save",
+    body: `Your first order as a member is ${WELCOME_DISCOUNT_PERCENT}% off. It comes off automatically at checkout — there is no code to enter and nothing to remember.`,
+  },
+  {
+    n: "03",
     title: "Earn",
     body: `Every order earns ${POINTS_PER_DOLLAR} point per dollar, multiplied by your tier. Points post as soon as payment clears.`,
   },
   {
-    n: "03",
+    n: "04",
     title: "Redeem",
     body: `Every ${REDEMPTION_THRESHOLD} points is ${formatPrice(REDEMPTION_VALUE_CENTS)} off your next order.`,
   },
@@ -45,19 +59,20 @@ export default function RewardsPage() {
             The Arkana Circle
           </h1>
           <p className="mx-auto mt-7 max-w-xl text-[0.95rem] leading-relaxed text-slate">
-            A quiet programme for people who buy less and keep it longer. Points
-            on everything, shipping on us as you climb, and first access to runs
-            before they&apos;re announced.
+            A quiet programme for people who buy less and keep it longer.{" "}
+            {WELCOME_DISCOUNT_PERCENT}% off the first order, points on
+            everything after, a longer window to change your mind, and first
+            access to runs before they&apos;re announced.
           </p>
-          <ButtonLink href="/signup" className="mt-10">
-            Join — {SIGNUP_BONUS} points free
-          </ButtonLink>
+          <JoinCircleLink className="mt-10" memberLabel="View your standing">
+            Join — {WELCOME_DISCOUNT_PERCENT}% off your first order
+          </JoinCircleLink>
         </div>
       </section>
 
       {/* ----------------------------------------------------------- How it works */}
       <section className="mx-auto max-w-6xl px-5 py-24 sm:px-8">
-        <div className="grid gap-12 sm:grid-cols-3">
+        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((step) => (
             <div key={step.n}>
               <p className="font-display text-5xl font-light text-sand">{step.n}</p>
@@ -71,7 +86,7 @@ export default function RewardsPage() {
       </section>
 
       {/* ----------------------------------------------------------------- Tiers */}
-      <section className="border-y border-parchment bg-linen">
+      <section id="memberships" className="border-y border-parchment bg-linen">
         <div className="mx-auto max-w-6xl px-5 py-24 sm:px-8">
           <div className="text-center">
             <p className="eyebrow text-clay">Standing</p>
@@ -80,11 +95,12 @@ export default function RewardsPage() {
             </h2>
             <p className="mx-auto mt-5 max-w-md text-sm text-slate">
               Tiers are set by lifetime spend and never expire. Once you reach a
-              tier, it&apos;s yours.
+              tier, it&apos;s yours — and if you&apos;d rather not wait, Adept
+              and Oracle can be taken outright for a single payment.
             </p>
           </div>
 
-          <div className="mt-14 grid gap-8 md:grid-cols-3">
+          <div className="mt-14 grid items-stretch gap-8 md:grid-cols-3">
             {TIERS.map((tier, i) => (
               <div
                 key={tier.name}
@@ -110,6 +126,17 @@ export default function RewardsPage() {
                     </li>
                   ))}
                 </ul>
+
+                {isPurchasableTier(tier.name) && (
+                  // `mt-auto` so the buttons line up across cards of unequal
+                  // height rather than floating under each perk list.
+                  <div className="mt-auto pt-8">
+                    <BuyMembershipButton tier={tier.name} />
+                    <p className="mt-3 text-center text-xs text-ash">
+                      One payment. Never expires.
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -124,6 +151,18 @@ export default function RewardsPage() {
         <dl className="mt-12 divide-y divide-parchment">
           {[
             [
+              "How does the first-order discount work?",
+              `Create an account and ${WELCOME_DISCOUNT_PERCENT}% comes off your first order automatically at checkout — no code. It's used once and then it's gone, so spend it on something you actually want.`,
+            ],
+            [
+              "Can I just buy Adept or Oracle?",
+              `Yes. Both are ${formatPrice(MEMBERSHIP_PRICE_CENTS.Adept)} and ${formatPrice(MEMBERSHIP_PRICE_CENTS.Oracle)} respectively — a single payment, no renewal, and the tier is yours for good. Every perk switches on the moment the payment clears. If you later spend your way past it, you simply keep the higher standing.`,
+            ],
+            [
+              `How does the ${MEMBER_DISCOUNT_PERCENT}% member discount work?`,
+              `Adept and Oracle members get ${MEMBER_DISCOUNT_PERCENT}% off every order, automatically, with no code and no minimum. It doesn't stack with the ${WELCOME_DISCOUNT_PERCENT}% welcome discount — we apply whichever saves you more, so your first order as a member takes the ${WELCOME_DISCOUNT_PERCENT}% and the ${MEMBER_DISCOUNT_PERCENT}% picks up from the order after, for good.`,
+            ],
+            [
               "Do points expire?",
               "No. Points and tier standing stay with your account for as long as it's open.",
             ],
@@ -137,7 +176,7 @@ export default function RewardsPage() {
             ],
             [
               "What happens if I return something?",
-              "Points earned on returned items are deducted when the refund is processed, and your lifetime total is adjusted to match.",
+              `Points earned on returned items are deducted when the refund is processed, and your lifetime total is adjusted to match. Everyone gets ${RETURN_WINDOW_DAYS} days to return; Adept and Oracle members get ${EXTENDED_RETURN_WINDOW_DAYS}.`,
             ],
           ].map(([q, a]) => (
             <div key={q} className="py-6">
