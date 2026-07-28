@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Fabric detail">
+  <defs>
+    <pattern id="weave" width="14" height="14" patternUnits="userSpaceOnUse">
+      <rect width="14" height="14" fill="#36363d"/>
+      <path d="M0 7 H14 M7 0 V14" stroke="#000" stroke-opacity="0.07" stroke-width="1.5"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="1000" fill="#e6ddd0"/>
+  <rect x="70" y="70" width="660" height="860" fill="url(#weave)"/>
+  <g fill="none" stroke="#c9a463" stroke-width="2">
+    <circle cx="400" cy="500" r="128" opacity="0.85"/>
+    <circle cx="400" cy="500" r="104" opacity="0.4"/>
+  </g>
+  <path d="M400 428 L455 560 L345 560 Z" fill="none" stroke="#c9a463" stroke-width="3"/>
+  <path d="M370 560 H430" stroke="#c9a463" stroke-width="3"/>
+  <text x="400" y="672" text-anchor="middle" fill="#c9a463"
+        font-family="Georgia, serif" font-size="30" letter-spacing="14">ARKANA</text>
+</svg>

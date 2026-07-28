@@ -2,20 +2,21 @@ import type Stripe from "stripe";
 import { tierFor } from "./rewards";
 
 /**
- * Flat-rate shipping. Stripe collects the address at checkout and applies the
- * rate the customer picks; we buy and print labels manually from the order.
+ * Shipping rates. Stripe collects the address at checkout and applies the rate
+ * the customer picks; we buy and print labels manually from the order.
+ *
+ * Standard shipping is free on every order, for everyone — there is no minimum.
+ * Express stays a paid upgrade, complimentary for Oracle members.
  *
  * Rates are built per-session rather than created in the Stripe dashboard so
- * that member perks (free shipping by tier) can be applied without maintaining
- * a matrix of shipping-rate objects upstream.
+ * that member perks can be applied without maintaining a matrix of
+ * shipping-rate objects upstream.
  */
-
-export const FREE_STANDARD_THRESHOLD_CENTS = 20000;
 
 export const COUNTRIES: Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[] =
   ["US", "CA", "GB", "IE", "AU", "NZ", "DE", "FR", "NL", "ES", "IT", "PT", "SE", "DK", "NO"];
 
-const STANDARD_CENTS = 700;
+const STANDARD_CENTS = 0;
 const EXPRESS_CENTS = 1800;
 
 type Rate = {
@@ -41,9 +42,9 @@ const EXPRESS: Rate = {
 
 /** Copy shown on the product page and in the cart, kept in sync with the rates above. */
 export const SHIPPING_SUMMARY = [
-  `Standard $${(STANDARD_CENTS / 100).toFixed(2)} · ${STANDARD.minDays}–${STANDARD.maxDays} business days`,
+  `Free standard shipping on every order · ${STANDARD.minDays}–${STANDARD.maxDays} business days`,
   `Express $${(EXPRESS_CENTS / 100).toFixed(2)} · ${EXPRESS.minDays}–${EXPRESS.maxDays} business days`,
-  `Free standard shipping over $${FREE_STANDARD_THRESHOLD_CENTS / 100}`,
+  "No minimum, no threshold, anywhere we ship",
 ];
 
 function toStripeRate(
@@ -67,24 +68,20 @@ function toStripeRate(
 /**
  * Builds the shipping options for a checkout session.
  *
- * Standard is free above the order threshold, and free outright for Adept and
- * Oracle members. Oracle members get express free as well — these are the
- * perks advertised on /rewards, enforced here.
+ * Standard is always free. Oracle members get express free as well — the perk
+ * advertised on /rewards, enforced here.
+ *
+ * Takes a member's standing (see `standingCents`), not raw lifetime spend, so
+ * an Oracle who bought the tier is served the same as one who spent into it.
  */
 export function shippingOptionsFor(
-  subtotalCents: number,
-  lifetimeSpendCents: number | null,
+  standing: number | null,
 ): Stripe.Checkout.SessionCreateParams.ShippingOption[] {
-  const tier = lifetimeSpendCents === null ? null : tierFor(lifetimeSpendCents);
-
-  const standardFree =
-    subtotalCents >= FREE_STANDARD_THRESHOLD_CENTS ||
-    tier?.name === "Adept" ||
-    tier?.name === "Oracle";
+  const tier = standing === null ? null : tierFor(standing);
   const expressFree = tier?.name === "Oracle";
 
   return [
-    toStripeRate(STANDARD, standardFree ? 0 : undefined),
+    toStripeRate(STANDARD),
     toStripeRate(EXPRESS, expressFree ? 0 : undefined),
   ];
 }

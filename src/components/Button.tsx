@@ -1,8 +1,14 @@
 import Link from "next/link";
 
 /**
- * Two button treatments used across the site: a solid graphite `primary` and a
- * hairline `outline`. Both share the same uppercase tracked label.
+ * Button treatments used across the site: a solid graphite `primary` and a
+ * hairline `outline`, plus `*OnDark` counterparts for the graphite sections.
+ * All share the same uppercase tracked label.
+ *
+ * Colours belong in a variant, never in a caller's `className`. Tailwind
+ * emits every utility at the same specificity, so which one wins depends on
+ * the order of the generated stylesheet, not the order of the class attribute
+ * — an override like `text-bone` on top of `text-graphite` silently loses.
  */
 const BASE =
   "inline-flex items-center justify-center gap-2 px-8 py-3.5 text-[0.7rem] font-medium uppercase tracking-[0.22em] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-45";
@@ -14,9 +20,13 @@ const VARIANTS = {
     "border border-tan text-graphite hover:border-gold hover:bg-linen",
   ghost:
     "text-slate hover:text-graphite",
+  primaryOnDark:
+    "bg-gold text-graphite hover:bg-gold-soft",
+  outlineOnDark:
+    "border border-white/25 text-bone hover:border-gold-soft hover:bg-white/5",
 } as const;
 
-type Variant = keyof typeof VARIANTS;
+export type Variant = keyof typeof VARIANTS;
 
 export function Button({
   variant = "primary",

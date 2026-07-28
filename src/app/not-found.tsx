@@ -9,8 +9,8 @@ export default function NotFound() {
       <p className="mt-4 text-sm text-slate">
         This page isn&apos;t part of the collection.
       </p>
-      <ButtonLink href="/hoodies" className="mt-9">
-        Shop hoodies
+      <ButtonLink href="/shop" className="mt-9">
+        Shop the collection
       </ButtonLink>
     </div>
   );

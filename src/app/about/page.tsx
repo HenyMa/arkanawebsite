@@ -31,7 +31,7 @@ export default function AboutPage() {
         <div className="grid items-center gap-14 lg:grid-cols-2">
           <div className="relative aspect-[4/5] overflow-hidden">
             <Image
-              src="/products/vesper-2.svg"
+              src="/products/meridian-2.svg"
               alt="Arkana fabric detail"
               fill
               sizes="(max-width: 1024px) 100vw, 50vw"
@@ -41,14 +41,15 @@ export default function AboutPage() {
           <div>
             <p className="eyebrow text-clay">Our approach</p>
             <h2 className="mt-3 font-display text-4xl font-light leading-tight text-graphite">
-              Three hoodies. That&apos;s the whole range.
+              Four garments. That&apos;s the whole range.
             </h2>
             <div className="mt-7 space-y-5 text-[0.95rem] leading-relaxed text-slate">
               <p>
-                We would rather make three things properly than thirty things
-                adequately. Each hoodie in the collection exists because it does
-                something the other two don&apos;t — a different weight, a
-                different drape, a different reason to reach for it.
+                We would rather make four things properly than forty things
+                adequately. A hoodie, a sweatshirt, a sweatpant, a zip-up — and
+                every piece within them exists because it does something the
+                others don&apos;t: a different weight, a different drape, a
+                different reason to reach for it.
               </p>
               <p>
                 Everything is cut, sewn, and dyed within forty kilometres of each
@@ -62,7 +63,7 @@ export default function AboutPage() {
                 price, and members of the Circle earn against it instead.
               </p>
             </div>
-            <ButtonLink href="/hoodies" className="mt-10">
+            <ButtonLink href="/shop" className="mt-10">
               See the collection
             </ButtonLink>
           </div>

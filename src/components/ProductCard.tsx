@@ -1,12 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import { formatPrice, type Product } from "@/lib/products";
+import { formatPrice, productPath, type Product } from "@/lib/products";
 
 export function ProductCard({ product }: { product: Product }) {
   const soldOut = product.inStock.length === 0;
 
   return (
-    <Link href={`/hoodies/${product.slug}`} className="group block">
+    <Link href={productPath(product)} className="group block">
       <div className="relative aspect-[4/5] overflow-hidden bg-linen">
         <Image
           src={product.images[0]}

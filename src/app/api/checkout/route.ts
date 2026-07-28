@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { getStripe, siteUrl } from "@/lib/stripe";
+import {
+  getMemberCoupon,
+  getWelcomeCoupon,
+  getStripe,
+  siteUrl,
+} from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { SIZES, getProduct, type Size } from "@/lib/products";
 import { COUNTRIES, shippingOptionsFor } from "@/lib/shipping";
+import {
+  MEMBER_DISCOUNT_PERCENT,
+  WELCOME_DISCOUNT_PERCENT,
+  memberDiscountCents,
+  standingCents,
+  welcomeDiscountCents,
+} from "@/lib/rewards";
 
 export const runtime = "nodejs";
 
@@ -12,6 +24,42 @@ type IncomingLine = { slug?: unknown; size?: unknown; quantity?: unknown };
 const MAX_QTY = 10;
 /** Stripe caps metadata values at 500 characters. */
 const METADATA_LIMIT = 500;
+
+type ProfileRow = {
+  lifetime_spend_cents: number | null;
+  welcome_discount_used_at: string | null;
+  purchased_tier?: string | null;
+};
+
+/**
+ * Reads the bits of a profile that decide perks.
+ *
+ * `purchased_tier` arrived with paid memberships, so a database that hasn't had
+ * supabase/schema.sql re-run yet doesn't have it. 42703 (undefined_column) is
+ * retried without it rather than left to fail: the welcome discount and points
+ * predate memberships and must keep working while the schema catches up.
+ */
+async function loadProfile(
+  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  userId: string,
+) {
+  const full = await supabase
+    .from("profiles")
+    .select("lifetime_spend_cents, welcome_discount_used_at, purchased_tier")
+    .eq("id", userId)
+    .single<ProfileRow>();
+
+  if (!full.error || full.error.code !== "42703") return full;
+
+  console.warn(
+    "[checkout] profiles.purchased_tier is missing; re-run supabase/schema.sql.",
+  );
+  return supabase
+    .from("profiles")
+    .select("lifetime_spend_cents, welcome_discount_used_at")
+    .eq("id", userId)
+    .single<ProfileRow>();
+}
 
 export async function POST(request: Request) {
   const stripe = getStripe();
@@ -89,19 +137,82 @@ export async function POST(request: Request) {
     });
   }
 
-  // Signed-in members get their tier's shipping perks and have the order
-  // attributed to them by the webhook.
+  // Signed-in members get their tier's perks and have the order attributed to
+  // them by the webhook.
   const supabase = await createClient();
   const user = supabase ? (await supabase.auth.getUser()).data.user : null;
 
-  let lifetimeSpendCents: number | null = null;
+  let standing = 0;
+  let welcomeEligible = false;
+
   if (supabase && user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("lifetime_spend_cents")
-      .eq("id", user.id)
-      .single();
-    lifetimeSpendCents = profile?.lifetime_spend_cents ?? 0;
+    const [{ data: profile }, { count: priorOrders }] = await Promise.all([
+      loadProfile(supabase, user.id),
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id),
+    ]);
+
+    // Tier follows spend *or* a bought membership, whichever is higher.
+    standing = standingCents(
+      profile?.lifetime_spend_cents,
+      profile?.purchased_tier,
+    );
+
+    /*
+     * "First order as a member" is read strictly: the perk is burned once the
+     * discount has been used, and it is never offered to an account that has
+     * already ordered — including accounts that predate the perk existing.
+     *
+     * The flag is only set once payment succeeds, so abandoning this checkout
+     * leaves the discount intact for next time. And a profile we couldn't read
+     * is treated as ineligible: failing closed risks giving 20% away twice,
+     * failing open risks giving it away twice *and* charging the wrong amount.
+     */
+    welcomeEligible =
+      Boolean(profile) &&
+      !profile?.welcome_discount_used_at &&
+      (priorOrders ?? 0) === 0;
+  }
+
+  /*
+   * Stripe Checkout takes at most one coupon per session, so the two member
+   * discounts compete rather than stack: whichever is worth more on this basket
+   * wins. Compared in cents rather than by rate so the rule keeps holding if
+   * either discount ever changes shape.
+   *
+   * Ties go to the recurring discount, because it comes back on the next order
+   * — the welcome discount does not, so it is worth saving. As the rates stand
+   * (20% against 10%) the welcome discount always wins a member's first order,
+   * and the member discount takes over from the second.
+   */
+  const welcomeCents = welcomeEligible ? welcomeDiscountCents(subtotalCents) : 0;
+  const memberCents = memberDiscountCents(standing, subtotalCents);
+
+  const useMember = memberCents > 0 && memberCents >= welcomeCents;
+  const useWelcome = !useMember && welcomeCents > 0;
+
+  let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined;
+  let welcomeDiscount = false;
+
+  if (useWelcome) {
+    try {
+      const coupon = await getWelcomeCoupon(stripe, WELCOME_DISCOUNT_PERCENT);
+      discounts = [{ coupon: coupon.id }];
+      welcomeDiscount = true;
+    } catch (err) {
+      // Better to sell at full price than to fail the checkout outright — and
+      // the perk survives, because nothing has been marked as used.
+      console.error("[checkout] Welcome discount unavailable:", err);
+    }
+  } else if (useMember) {
+    try {
+      const coupon = await getMemberCoupon(stripe, MEMBER_DISCOUNT_PERCENT);
+      discounts = [{ coupon: coupon.id }];
+    } catch (err) {
+      console.error("[checkout] Member discount unavailable:", err);
+    }
   }
 
   const itemsJson = JSON.stringify(compact);
@@ -112,15 +223,21 @@ export async function POST(request: Request) {
       line_items: lineItems,
       // Stripe collects and validates the shipping address for us.
       shipping_address_collection: { allowed_countries: COUNTRIES },
-      shipping_options: shippingOptionsFor(subtotalCents, lifetimeSpendCents),
-      allow_promotion_codes: true,
+      shipping_options: shippingOptionsFor(standing),
+      // Stripe rejects a session that both carries a discount and invites a
+      // promotion code, so the welcome discount takes precedence.
+      ...(discounts ? { discounts } : { allow_promotion_codes: true }),
       phone_number_collection: { enabled: false },
       ...(user?.email ? { customer_email: user.email } : {}),
       client_reference_id: user?.id,
       metadata: {
         // Read back by the webhook to record the order and mint points.
         user_id: user?.id ?? "",
+        // Gross, before any discount. The webhook subtracts what Stripe reports
+        // as actually discounted, so promo codes and the welcome discount are
+        // handled the same way.
         subtotal_cents: String(subtotalCents),
+        welcome_discount: welcomeDiscount ? "1" : "",
         items: itemsJson.length <= METADATA_LIMIT ? itemsJson : "",
       },
       success_url: `${siteUrl()}/success?session_id={CHECKOUT_SESSION_ID}`,

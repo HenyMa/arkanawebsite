@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { Mark, Wordmark } from "./Logo";
+import { CATEGORIES, categoryPath } from "@/lib/products";
 import { SHIPPING_SUMMARY } from "@/lib/shipping";
 
 const COLUMNS = [
   {
     heading: "Shop",
     links: [
-      { href: "/hoodies", label: "Hoodies" },
+      ...CATEGORIES.map((category) => ({
+        href: categoryPath(category.slug),
+        label: category.name,
+      })),
       { href: "/cart", label: "Cart" },
-      { href: "/rewards", label: "The Arkana Circle" },
+      { href: "/search", label: "Search" },
     ],
   },
   {
@@ -17,12 +21,14 @@ const COLUMNS = [
       { href: "/login", label: "Sign in" },
       { href: "/signup", label: "Create an account" },
       { href: "/account", label: "Orders & points" },
+      { href: "/account", label: "Start a return" },
     ],
   },
   {
     heading: "Company",
     links: [
       { href: "/about", label: "About" },
+      { href: "/rewards", label: "The Arkana Circle" },
       { href: "/shipping", label: "Shipping & returns" },
     ],
   },
@@ -49,7 +55,7 @@ export function Footer() {
               <h3 className="eyebrow text-gold-soft">{col.heading}</h3>
               <ul className="mt-5 space-y-3">
                 {col.links.map((link) => (
-                  <li key={link.href}>
+                  <li key={link.label}>
                     <Link
                       href={link.href}
                       className="text-sm text-mist transition-colors hover:text-bone"
