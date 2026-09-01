@@ -27,18 +27,17 @@ export default async function SearchPage({ searchParams }: Props) {
   const { results, relaxed } = search(query, MAX_RESULTS);
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-20 sm:px-8">
-      <p className="eyebrow text-clay">Search</p>
-      <h1 className="mt-3 font-display text-5xl font-light text-graphite">
+    <div className="mx-auto max-w-3xl px-5 py-20 sm:px-10 sm:py-28">
+      <h1 className="section-title text-center text-graphite">
         {query ? <>&ldquo;{query}&rdquo;</> : "Search"}
       </h1>
 
       {/* GET form: no JavaScript needed, and the results stay linkable. */}
-      <form action="/search" method="get" className="mt-9">
+      <form action="/search" method="get" className="mt-12">
         <label htmlFor="q" className="sr-only">
           Search Arkana
         </label>
-        <div className="flex border border-sand focus-within:border-gold">
+        <div className="flex border border-parchment focus-within:border-graphite">
           <input
             id="q"
             name="q"
@@ -50,14 +49,12 @@ export default async function SearchPage({ searchParams }: Props) {
           />
           <button
             type="submit"
-            className="shrink-0 bg-graphite px-7 text-[0.7rem] font-medium uppercase tracking-[0.22em] text-bone transition-colors hover:bg-gold-deep"
+            className="eyebrow shrink-0 bg-graphite px-8 text-bone transition-opacity hover:opacity-85"
           >
             Search
           </button>
         </div>
       </form>
-
-      <div className="rule-gold mt-10" />
 
       {!query ? (
         <EmptyState />
@@ -99,7 +96,7 @@ function EmptyState() {
           <li key={suggestion}>
             <Link
               href={`/search?q=${encodeURIComponent(suggestion)}`}
-              className="border border-sand px-4 py-2 text-sm text-graphite transition-colors hover:border-gold hover:bg-linen"
+              className="border border-parchment px-4 py-2 text-sm text-graphite transition-colors hover:border-graphite hover:bg-linen"
             >
               {suggestion}
             </Link>
@@ -132,10 +129,8 @@ function NoResults({ query }: { query: string }) {
               href={categoryPath(category.slug)}
               className="block bg-bone px-6 py-6 transition-colors hover:bg-linen"
             >
-              <p className="font-display text-xl text-graphite">
-                {category.name}
-              </p>
-              <p className="mt-1.5 text-sm tabular-nums text-gold-deep">
+              <p className="eyebrow text-graphite">{category.name}</p>
+              <p className="eyebrow mt-3 tabular-nums text-slate">
                 {formatPrice(category.priceCents)}
               </p>
             </Link>

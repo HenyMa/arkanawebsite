@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import {
-  getMemberCoupon,
+  getSecondOrderCoupon,
   getWelcomeCoupon,
   getStripe,
   siteUrl,
@@ -10,11 +10,9 @@ import { createClient } from "@/lib/supabase/server";
 import { SIZES, getProduct, type Size } from "@/lib/products";
 import { COUNTRIES, shippingOptionsFor } from "@/lib/shipping";
 import {
-  MEMBER_DISCOUNT_PERCENT,
   WELCOME_DISCOUNT_PERCENT,
-  memberDiscountCents,
+  secondOrderDiscountPercent,
   standingCents,
-  welcomeDiscountCents,
 } from "@/lib/rewards";
 
 export const runtime = "nodejs";
@@ -29,15 +27,23 @@ type ProfileRow = {
   lifetime_spend_cents: number | null;
   welcome_discount_used_at: string | null;
   purchased_tier?: string | null;
+  second_order_discount_used_at?: string | null;
 };
 
 /**
  * Reads the bits of a profile that decide perks.
  *
- * `purchased_tier` arrived with paid memberships, so a database that hasn't had
- * supabase/schema.sql re-run yet doesn't have it. 42703 (undefined_column) is
- * retried without it rather than left to fail: the welcome discount and points
- * predate memberships and must keep working while the schema catches up.
+ * `purchased_tier` arrived with paid memberships and
+ * `second_order_discount_used_at` with the second-order discount, so a database
+ * that hasn't had supabase/schema.sql re-run yet has neither. 42703
+ * (undefined_column) is retried without them rather than left to fail: the
+ * welcome discount and points predate both and must keep working while the
+ * schema catches up.
+ *
+ * The retry drops the newer columns, which leaves them undefined — and every
+ * rule below reads undefined as "no tier, perk not available". An un-migrated
+ * database therefore under-grants rather than over-grants, which is the right
+ * way round: we can always honour a missed discount by hand.
  */
 async function loadProfile(
   supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
@@ -45,14 +51,16 @@ async function loadProfile(
 ) {
   const full = await supabase
     .from("profiles")
-    .select("lifetime_spend_cents, welcome_discount_used_at, purchased_tier")
+    .select(
+      "lifetime_spend_cents, welcome_discount_used_at, purchased_tier, second_order_discount_used_at",
+    )
     .eq("id", userId)
     .single<ProfileRow>();
 
   if (!full.error || full.error.code !== "42703") return full;
 
   console.warn(
-    "[checkout] profiles.purchased_tier is missing; re-run supabase/schema.sql.",
+    "[checkout] profiles is missing purchased_tier or second_order_discount_used_at; re-run supabase/schema.sql.",
   );
   return supabase
     .from("profiles")
@@ -144,6 +152,7 @@ export async function POST(request: Request) {
 
   let standing = 0;
   let welcomeEligible = false;
+  let secondOrderEligible = false;
 
   if (supabase && user) {
     const [{ data: profile }, { count: priorOrders }] = await Promise.all([
@@ -160,43 +169,43 @@ export async function POST(request: Request) {
       profile?.purchased_tier,
     );
 
+    const ordersSoFar = priorOrders ?? 0;
+
     /*
-     * "First order as a member" is read strictly: the perk is burned once the
-     * discount has been used, and it is never offered to an account that has
-     * already ordered — including accounts that predate the perk existing.
+     * Both perks are read strictly by order number: the first is offered only
+     * to an account that has never ordered, the second only to one that has
+     * ordered exactly once — including accounts that predate either perk
+     * existing, which get neither.
      *
-     * The flag is only set once payment succeeds, so abandoning this checkout
-     * leaves the discount intact for next time. And a profile we couldn't read
-     * is treated as ineligible: failing closed risks giving 20% away twice,
-     * failing open risks giving it away twice *and* charging the wrong amount.
+     * Each is also gated on its own burn flag, which is only set once payment
+     * succeeds. So abandoning this checkout leaves the discount intact for next
+     * time, and an order that went through without its coupon (Stripe was down,
+     * say) doesn't silently consume the perk.
+     *
+     * A profile we couldn't read is treated as ineligible for both: failing
+     * closed risks giving a discount away late, failing open risks giving it
+     * away twice *and* charging the wrong amount.
      */
     welcomeEligible =
+      Boolean(profile) && !profile?.welcome_discount_used_at && ordersSoFar === 0;
+
+    secondOrderEligible =
       Boolean(profile) &&
-      !profile?.welcome_discount_used_at &&
-      (priorOrders ?? 0) === 0;
+      !profile?.second_order_discount_used_at &&
+      ordersSoFar === 1;
   }
 
   /*
-   * Stripe Checkout takes at most one coupon per session, so the two member
-   * discounts compete rather than stack: whichever is worth more on this basket
-   * wins. Compared in cents rather than by rate so the rule keeps holding if
-   * either discount ever changes shape.
-   *
-   * Ties go to the recurring discount, because it comes back on the next order
-   * — the welcome discount does not, so it is worth saving. As the rates stand
-   * (20% against 10%) the welcome discount always wins a member's first order,
-   * and the member discount takes over from the second.
+   * The two perks are mutually exclusive by construction — one is offered on
+   * order zero and the other on order one — so there is nothing to compare and
+   * nothing to stack, which suits Stripe Checkout's one-coupon-per-session
+   * limit. The branches below are ordered to match, not to prioritise.
    */
-  const welcomeCents = welcomeEligible ? welcomeDiscountCents(subtotalCents) : 0;
-  const memberCents = memberDiscountCents(standing, subtotalCents);
-
-  const useMember = memberCents > 0 && memberCents >= welcomeCents;
-  const useWelcome = !useMember && welcomeCents > 0;
-
   let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined;
   let welcomeDiscount = false;
+  let secondOrderDiscount = false;
 
-  if (useWelcome) {
+  if (welcomeEligible) {
     try {
       const coupon = await getWelcomeCoupon(stripe, WELCOME_DISCOUNT_PERCENT);
       discounts = [{ coupon: coupon.id }];
@@ -206,12 +215,16 @@ export async function POST(request: Request) {
       // the perk survives, because nothing has been marked as used.
       console.error("[checkout] Welcome discount unavailable:", err);
     }
-  } else if (useMember) {
+  } else if (secondOrderEligible) {
     try {
-      const coupon = await getMemberCoupon(stripe, MEMBER_DISCOUNT_PERCENT);
+      const coupon = await getSecondOrderCoupon(
+        stripe,
+        secondOrderDiscountPercent(standing),
+      );
       discounts = [{ coupon: coupon.id }];
+      secondOrderDiscount = true;
     } catch (err) {
-      console.error("[checkout] Member discount unavailable:", err);
+      console.error("[checkout] Second-order discount unavailable:", err);
     }
   }
 
@@ -225,9 +238,19 @@ export async function POST(request: Request) {
       shipping_address_collection: { allowed_countries: COUNTRIES },
       shipping_options: shippingOptionsFor(standing),
       // Stripe rejects a session that both carries a discount and invites a
-      // promotion code, so the welcome discount takes precedence.
+      // promotion code, so an automatic member perk takes precedence and the
+      // promo box only appears when there is no perk to apply.
       ...(discounts ? { discounts } : { allow_promotion_codes: true }),
-      phone_number_collection: { enabled: false },
+      /*
+       * Collected for the carrier — several want a contact number on an
+       * international label, and this site ships to fifteen countries.
+       *
+       * Explicitly *not* a marketing opt-in: a number given so a parcel can be
+       * delivered is not consent to be texted about drops. That is asked for
+       * separately on /success and verified by code, and this number is never
+       * copied into `profiles.phone`.
+       */
+      phone_number_collection: { enabled: true },
       ...(user?.email ? { customer_email: user.email } : {}),
       client_reference_id: user?.id,
       metadata: {
@@ -237,7 +260,11 @@ export async function POST(request: Request) {
         // as actually discounted, so promo codes and the welcome discount are
         // handled the same way.
         subtotal_cents: String(subtotalCents),
+        // Which one-time perk to burn once this session is paid for. At most
+        // one is ever set, and only when the coupon actually made it onto the
+        // session.
         welcome_discount: welcomeDiscount ? "1" : "",
+        second_order_discount: secondOrderDiscount ? "1" : "",
         items: itemsJson.length <= METADATA_LIMIT ? itemsJson : "",
       },
       success_url: `${siteUrl()}/success?session_id={CHECKOUT_SESSION_ID}`,

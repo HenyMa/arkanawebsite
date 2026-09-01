@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ReturnActions } from "@/components/ReturnActions";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice, productPathBySlug } from "@/lib/products";
+import { formatAddress } from "@/lib/orders";
 import { RETURN_STATUS_COPY, reasonLabel, type ReturnStatus } from "@/lib/returns";
 
 type Params = { params: Promise<{ id: string }> };
@@ -42,21 +43,6 @@ type ReturnDetail = {
     shipping: unknown;
   } | null;
 };
-
-function formatAddress(shipping: unknown): string[] {
-  const s = shipping as
-    | { name?: string; address?: Record<string, string | null> }
-    | null;
-  if (!s?.address) return [];
-  const a = s.address;
-  return [
-    s.name,
-    a.line1,
-    a.line2,
-    [a.city, a.state, a.postal_code].filter(Boolean).join(" "),
-    a.country,
-  ].filter((line): line is string => Boolean(line && line.trim()));
-}
 
 export default async function AdminReturnDetail({ params }: Params) {
   const { id } = await params;

@@ -1,17 +1,17 @@
 import { ButtonLink } from "@/components/Button";
-import { Mark } from "@/components/Logo";
 
 export default function NotFound() {
   return (
-    <div className="mx-auto max-w-md px-5 py-32 text-center sm:px-8">
-      <Mark className="mx-auto h-10 w-10 text-tan" />
-      <h1 className="mt-8 font-display text-5xl font-light text-graphite">404</h1>
-      <p className="mt-4 text-sm text-slate">
+    <div className="mx-auto max-w-md px-5 py-40 text-center sm:px-10">
+      <h1 className="display-line text-graphite">404</h1>
+      <p className="mt-8 text-sm text-slate">
         This page isn&apos;t part of the collection.
       </p>
-      <ButtonLink href="/shop" className="mt-9">
-        Shop the collection
-      </ButtonLink>
+      <div className="mt-11">
+        <ButtonLink href="/shop" variant="link">
+          Shop the collection
+        </ButtonLink>
+      </div>
     </div>
   );
 }

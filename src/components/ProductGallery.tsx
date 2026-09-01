@@ -1,8 +1,13 @@
-"use client";
-
 import Image from "next/image";
-import { useState } from "react";
 
+/**
+ * The product's images, stacked one under the other on desktop so the page
+ * scrolls through the shoot the way a lookbook does, and as a snap-scrolling
+ * row on phones where a tall stack would bury the buy button.
+ *
+ * No thumbnails and no lightbox: with the images already at full column width
+ * there is nothing a thumbnail strip would reveal.
+ */
 export function ProductGallery({
   images,
   alt,
@@ -10,42 +15,23 @@ export function ProductGallery({
   images: string[];
   alt: string;
 }) {
-  const [active, setActive] = useState(0);
-
   return (
-    <div>
-      <div className="relative aspect-[4/5] overflow-hidden bg-linen">
-        <Image
-          key={images[active]}
-          src={images[active]}
-          alt={alt}
-          fill
-          priority
-          sizes="(max-width: 1024px) 100vw, 55vw"
-          className="animate-rise object-cover"
-        />
-      </div>
-
-      {images.length > 1 && (
-        <div className="mt-4 flex gap-4">
-          {images.map((src, i) => (
-            <button
-              key={src}
-              type="button"
-              onClick={() => setActive(i)}
-              aria-label={`View image ${i + 1}`}
-              aria-current={i === active}
-              className={`relative aspect-[4/5] w-20 overflow-hidden bg-linen transition-opacity ${
-                i === active
-                  ? "ring-1 ring-gold"
-                  : "opacity-60 hover:opacity-100"
-              }`}
-            >
-              <Image src={src} alt="" fill sizes="80px" className="object-cover" />
-            </button>
-          ))}
+    <div className="-mx-5 flex snap-x snap-mandatory gap-1 overflow-x-auto sm:mx-0 lg:block lg:gap-0 lg:overflow-visible">
+      {images.map((src, i) => (
+        <div
+          key={src}
+          className="relative aspect-[4/5] w-full shrink-0 snap-center bg-linen lg:mb-1 lg:w-auto"
+        >
+          <Image
+            src={src}
+            alt={i === 0 ? alt : ""}
+            fill
+            priority={i === 0}
+            sizes="(max-width: 1024px) 100vw, 55vw"
+            className="object-cover"
+          />
         </div>
-      )}
+      ))}
     </div>
   );
 }

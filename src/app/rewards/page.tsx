@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { BuyMembershipButton } from "@/components/BuyMembershipButton";
 import { JoinCircleLink } from "@/components/JoinCircleLink";
-import { Mark } from "@/components/Logo";
 import {
-  MEMBER_DISCOUNT_PERCENT,
+  SECOND_ORDER_DISCOUNT_PERCENT,
+  TIER_SECOND_ORDER_DISCOUNT_PERCENT,
   MEMBERSHIP_PRICE_CENTS,
   POINTS_PER_DOLLAR,
   REDEMPTION_THRESHOLD,
@@ -34,7 +34,7 @@ const STEPS = [
   {
     n: "02",
     title: "Save",
-    body: `Your first order as a member is ${WELCOME_DISCOUNT_PERCENT}% off. It comes off automatically at checkout — there is no code to enter and nothing to remember.`,
+    body: `Your first order as a member is ${WELCOME_DISCOUNT_PERCENT}% off and your second is ${SECOND_ORDER_DISCOUNT_PERCENT}% — ${TIER_SECOND_ORDER_DISCOUNT_PERCENT}% if you're Adept or Oracle. Both come off automatically at checkout, with no code to enter.`,
   },
   {
     n: "03",
@@ -51,88 +51,76 @@ const STEPS = [
 export default function RewardsPage() {
   return (
     <div>
-      <section className="border-b border-parchment bg-linen">
-        <div className="mx-auto max-w-3xl px-5 py-24 text-center sm:px-8">
-          <Mark className="animate-rise mx-auto h-11 w-11 text-gold" />
-          <p className="eyebrow mt-8 text-clay">Rewards</p>
-          <h1 className="mt-4 font-display text-5xl font-light text-graphite sm:text-6xl">
-            The Arkana Circle
-          </h1>
-          <p className="mx-auto mt-7 max-w-xl text-[0.95rem] leading-relaxed text-slate">
-            A quiet programme for people who buy less and keep it longer.{" "}
-            {WELCOME_DISCOUNT_PERCENT}% off the first order, points on
-            everything after, a longer window to change your mind, and first
-            access to runs before they&apos;re announced.
-          </p>
-          <JoinCircleLink className="mt-10" memberLabel="View your standing">
+      <section className="mx-auto max-w-3xl px-5 py-28 text-center sm:px-10 sm:py-36">
+        <p className="eyebrow text-clay">Membership</p>
+        <h1 className="display-line mt-8 text-graphite">The Arkana Circle</h1>
+        <p className="mx-auto mt-12 max-w-lg text-sm leading-relaxed text-slate">
+          A quiet programme for people who buy less and keep it longer.{" "}
+          {WELCOME_DISCOUNT_PERCENT}% off the first order, points on everything
+          after, a longer window to change your mind, and first access to runs
+          before they&apos;re announced.
+        </p>
+        <div className="mt-12">
+          <JoinCircleLink variant="link" memberLabel="View your standing">
             Join — {WELCOME_DISCOUNT_PERCENT}% off your first order
           </JoinCircleLink>
         </div>
       </section>
 
       {/* ----------------------------------------------------------- How it works */}
-      <section className="mx-auto max-w-6xl px-5 py-24 sm:px-8">
-        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="border-t border-parchment px-5 py-24 sm:px-10">
+        <div className="mx-auto grid max-w-[110rem] gap-14 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((step) => (
-            <div key={step.n}>
-              <p className="font-display text-5xl font-light text-sand">{step.n}</p>
-              <h2 className="mt-4 font-display text-2xl text-graphite">
-                {step.title}
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-slate">{step.body}</p>
+            <div key={step.n} className="border-t border-parchment pt-7">
+              <p className="eyebrow text-mist">{step.n}</p>
+              <h2 className="eyebrow mt-5 text-graphite">{step.title}</h2>
+              <p className="mt-5 text-xs leading-relaxed text-slate">
+                {step.body}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ----------------------------------------------------------------- Tiers */}
-      <section id="memberships" className="border-y border-parchment bg-linen">
-        <div className="mx-auto max-w-6xl px-5 py-24 sm:px-8">
+      <section
+        id="memberships"
+        className="border-t border-parchment bg-linen px-5 py-24 sm:px-10 sm:py-32"
+      >
+        <div className="mx-auto max-w-[110rem]">
           <div className="text-center">
-            <p className="eyebrow text-clay">Standing</p>
-            <h2 className="mt-3 font-display text-4xl font-light text-graphite">
-              Three tiers
-            </h2>
-            <p className="mx-auto mt-5 max-w-md text-sm text-slate">
+            <h2 className="section-title text-graphite">Three tiers</h2>
+            <p className="mx-auto mt-7 max-w-md text-sm leading-relaxed text-slate">
               Tiers are set by lifetime spend and never expire. Once you reach a
               tier, it&apos;s yours — and if you&apos;d rather not wait, Adept
               and Oracle can be taken outright for a single payment.
             </p>
           </div>
 
-          <div className="mt-14 grid items-stretch gap-8 md:grid-cols-3">
-            {TIERS.map((tier, i) => (
+          <div className="mt-20 grid items-stretch gap-12 md:grid-cols-3">
+            {TIERS.map((tier) => (
               <div
                 key={tier.name}
-                className={`flex flex-col border bg-bone p-8 ${
-                  i === TIERS.length - 1 ? "border-gold" : "border-parchment"
-                }`}
+                className="flex flex-col border-t border-clay/40 pt-7"
               >
-                <p className="font-display text-3xl text-graphite">{tier.name}</p>
-                <p className="mt-2 text-[0.7rem] uppercase tracking-[0.18em] text-clay">
+                <p className="eyebrow text-graphite">{tier.name}</p>
+                <p className="eyebrow mt-3 text-clay">
                   {tier.thresholdCents === 0
                     ? "On joining"
                     : `From ${formatPrice(tier.thresholdCents)} lifetime`}
                 </p>
-                <div className="rule-gold my-6" />
-                <ul className="space-y-3 text-sm text-slate">
+                <ul className="mt-8 space-y-3 text-xs leading-relaxed text-slate">
                   {tier.perks.map((perk) => (
-                    <li key={perk} className="flex gap-3">
-                      <span
-                        className="mt-2 h-px w-4 shrink-0 bg-gold"
-                        aria-hidden="true"
-                      />
-                      {perk}
-                    </li>
+                    <li key={perk}>{perk}</li>
                   ))}
                 </ul>
 
                 {isPurchasableTier(tier.name) && (
-                  // `mt-auto` so the buttons line up across cards of unequal
+                  // `mt-auto` so the buttons line up across columns of unequal
                   // height rather than floating under each perk list.
-                  <div className="mt-auto pt-8">
+                  <div className="mt-auto pt-10">
                     <BuyMembershipButton tier={tier.name} />
-                    <p className="mt-3 text-center text-xs text-ash">
+                    <p className="eyebrow mt-4 text-ash">
                       One payment. Never expires.
                     </p>
                   </div>
@@ -144,11 +132,9 @@ export default function RewardsPage() {
       </section>
 
       {/* ------------------------------------------------------------------- FAQ */}
-      <section className="mx-auto max-w-2xl px-5 py-24 sm:px-8">
-        <h2 className="text-center font-display text-4xl font-light text-graphite">
-          Questions
-        </h2>
-        <dl className="mt-12 divide-y divide-parchment">
+      <section className="mx-auto max-w-2xl px-5 py-24 sm:px-10 sm:py-32">
+        <h2 className="section-title text-center text-graphite">Questions</h2>
+        <dl className="mt-16 divide-y divide-parchment border-y border-parchment">
           {[
             [
               "How does the first-order discount work?",
@@ -159,8 +145,8 @@ export default function RewardsPage() {
               `Yes. Both are ${formatPrice(MEMBERSHIP_PRICE_CENTS.Adept)} and ${formatPrice(MEMBERSHIP_PRICE_CENTS.Oracle)} respectively — a single payment, no renewal, and the tier is yours for good. Every perk switches on the moment the payment clears. If you later spend your way past it, you simply keep the higher standing.`,
             ],
             [
-              `How does the ${MEMBER_DISCOUNT_PERCENT}% member discount work?`,
-              `Adept and Oracle members get ${MEMBER_DISCOUNT_PERCENT}% off every order, automatically, with no code and no minimum. It doesn't stack with the ${WELCOME_DISCOUNT_PERCENT}% welcome discount — we apply whichever saves you more, so your first order as a member takes the ${WELCOME_DISCOUNT_PERCENT}% and the ${MEMBER_DISCOUNT_PERCENT}% picks up from the order after, for good.`,
+              "How does the second-order discount work?",
+              `Your second order as a member takes ${SECOND_ORDER_DISCOUNT_PERCENT}% off automatically — or ${TIER_SECOND_ORDER_DISCOUNT_PERCENT}% if you've reached Adept or Oracle by then, whether you spent your way there or bought the tier. Like the welcome discount it's used once and no code is needed, and the two never overlap: the first order takes one, the second takes the other.`,
             ],
             [
               "Do points expire?",
@@ -179,9 +165,9 @@ export default function RewardsPage() {
               `Points earned on returned items are deducted when the refund is processed, and your lifetime total is adjusted to match. Everyone gets ${RETURN_WINDOW_DAYS} days to return; Adept and Oracle members get ${EXTENDED_RETURN_WINDOW_DAYS}.`,
             ],
           ].map(([q, a]) => (
-            <div key={q} className="py-6">
-              <dt className="font-display text-xl text-graphite">{q}</dt>
-              <dd className="mt-2 text-sm leading-relaxed text-slate">{a}</dd>
+            <div key={q} className="py-8">
+              <dt className="eyebrow text-graphite">{q}</dt>
+              <dd className="mt-4 text-xs leading-relaxed text-slate">{a}</dd>
             </div>
           ))}
         </dl>

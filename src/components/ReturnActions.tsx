@@ -87,7 +87,7 @@ export function ReturnActions({
         rows={3}
         maxLength={1000}
         placeholder="Optional — required when rejecting."
-        className="mt-3 w-full border border-sand bg-bone px-4 py-3 text-sm text-graphite placeholder:text-mist focus:border-gold focus:outline-none"
+        className="mt-3 w-full border border-parchment bg-bone px-4 py-3 text-sm text-graphite placeholder:text-mist focus:border-graphite focus:outline-none"
       />
 
       <div className="mt-4 flex flex-wrap gap-3">
@@ -104,7 +104,7 @@ export function ReturnActions({
       </div>
 
       {error && (
-        <p className="mt-4 border border-tan bg-parchment/60 p-3 text-xs leading-relaxed text-graphite">
+        <p className="mt-4 border-l border-clay p-3 text-xs leading-relaxed text-graphite">
           {error}
         </p>
       )}

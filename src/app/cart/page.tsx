@@ -49,22 +49,22 @@ export default function CartPage() {
   }
 
   if (!ready) {
-    return <div className="mx-auto max-w-6xl px-5 py-24 sm:px-8" />;
+    return <div className="mx-auto max-w-6xl px-5 py-24 sm:px-10" />;
   }
 
   if (resolved.length === 0) {
     return (
-      <div className="mx-auto max-w-md px-5 py-32 text-center sm:px-8">
-        <h1 className="font-display text-4xl font-light text-graphite">
-          Your cart is empty
-        </h1>
-        <p className="mt-4 text-sm text-slate">
+      <div className="mx-auto max-w-md px-5 py-40 text-center sm:px-10">
+        <h1 className="section-title text-graphite">Your cart is empty</h1>
+        <p className="mt-7 text-sm leading-relaxed text-slate">
           Hoodies, sweatshirts, sweatpants, and zip-ups — made in small batches.
           Start there.
         </p>
-        <ButtonLink href="/shop" className="mt-9">
-          Shop the collection
-        </ButtonLink>
+        <div className="mt-11">
+          <ButtonLink href="/shop" variant="link">
+            Shop the collection
+          </ButtonLink>
+        </div>
       </div>
     );
   }
@@ -72,16 +72,13 @@ export default function CartPage() {
   const pointsEarned = Math.floor((subtotalCents / 100) * POINTS_PER_DOLLAR);
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
-      <h1 className="font-display text-4xl font-light text-graphite sm:text-5xl">
-        Cart
-      </h1>
-      <div className="rule-gold mt-8" />
+    <div className="mx-auto max-w-6xl px-5 py-16 sm:px-10">
+      <h1 className="section-title text-center text-graphite">Cart</h1>
 
-      <div className="mt-10 grid gap-14 lg:grid-cols-[1.6fr_1fr]">
-        <ul className="divide-y divide-parchment">
+      <div className="mt-16 grid gap-16 lg:grid-cols-[1.6fr_1fr]">
+        <ul className="divide-y divide-parchment border-y border-parchment">
           {resolved.map((line) => (
-            <li key={`${line.slug}-${line.size}`} className="flex gap-6 py-7">
+            <li key={`${line.slug}-${line.size}`} className="flex gap-6 py-8">
               <Link
                 href={productPathBySlug(line.slug)}
                 className="relative aspect-[4/5] w-24 shrink-0 overflow-hidden bg-linen sm:w-28"
@@ -100,21 +97,21 @@ export default function CartPage() {
                   <div>
                     <Link
                       href={productPathBySlug(line.slug)}
-                      className="font-display text-xl text-graphite"
+                      className="eyebrow text-graphite transition-opacity hover:opacity-55"
                     >
                       {line.name}
                     </Link>
-                    <p className="mt-1 text-sm text-ash">
+                    <p className="eyebrow mt-3 text-mist">
                       {line.colorway} · Size {line.size}
                     </p>
                   </div>
-                  <p className="text-sm tabular-nums text-slate">
+                  <p className="eyebrow tabular-nums text-slate">
                     {formatPrice(line.lineTotalCents)}
                   </p>
                 </div>
 
                 <div className="mt-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center border border-sand">
+                  <div className="flex items-center border border-parchment">
                     <button
                       type="button"
                       onClick={() =>
@@ -143,7 +140,7 @@ export default function CartPage() {
                   <button
                     type="button"
                     onClick={() => remove(line.slug, line.size)}
-                    className="text-xs text-ash underline underline-offset-4 hover:text-slate"
+                    className="eyebrow text-ash underline underline-offset-4 transition-opacity hover:opacity-55"
                   >
                     Remove
                   </button>
@@ -154,31 +151,31 @@ export default function CartPage() {
         </ul>
 
         {/* ------------------------------------------------------------ Summary */}
-        <aside className="h-fit border border-parchment bg-linen/60 p-7 lg:sticky lg:top-32">
-          <h2 className="eyebrow text-clay">Summary</h2>
+        <aside className="h-fit border-t border-parchment pt-8 lg:sticky lg:top-32">
+          <h2 className="eyebrow text-graphite">Summary</h2>
 
-          <dl className="mt-6 space-y-3 text-sm">
+          <dl className="mt-8 space-y-4">
             <div className="flex justify-between">
-              <dt className="text-slate">Subtotal</dt>
-              <dd className="tabular-nums text-graphite">
+              <dt className="eyebrow text-slate">Subtotal</dt>
+              <dd className="eyebrow tabular-nums text-graphite">
                 {formatPrice(subtotalCents)}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate">Standard shipping</dt>
-              <dd className="text-gold-deep">Free</dd>
+              <dt className="eyebrow text-slate">Standard shipping</dt>
+              <dd className="eyebrow text-graphite">Free</dd>
             </div>
           </dl>
 
           {/* The discount is applied by the checkout route, which is the only
               place that can tell whether this member is still eligible. */}
-          <p className="mt-5 border-t border-parchment pt-5 text-xs leading-relaxed text-slate">
+          <p className="mt-8 border-t border-parchment pt-6 text-xs leading-relaxed text-slate">
             Members take {WELCOME_DISCOUNT_PERCENT}% off their first order — it
             comes off at checkout automatically.
             {!signedIn && (
               <>
                 {" "}
-                <Link href="/signup" className="link-underline text-gold-deep">
+                <Link href="/signup" className="link-underline text-graphite">
                   Join the Circle
                 </Link>
                 .
@@ -190,17 +187,17 @@ export default function CartPage() {
             Earns {pointsEarned} points before any discount
           </p>
 
-          <Button onClick={checkout} disabled={busy} className="mt-7 w-full">
+          <Button onClick={checkout} disabled={busy} className="mt-9 w-full">
             {busy ? "Redirecting…" : "Checkout"}
           </Button>
 
           {error && (
-            <p className="mt-4 border border-tan bg-parchment/60 p-3 text-xs leading-relaxed text-graphite">
+            <p className="mt-5 border-l border-clay pl-4 text-xs leading-relaxed text-graphite">
               {error}
             </p>
           )}
 
-          <ul className="mt-7 space-y-1.5 border-t border-parchment pt-5 text-xs text-ash">
+          <ul className="mt-9 space-y-2 border-t border-parchment pt-6 text-xs text-ash">
             {SHIPPING_SUMMARY.map((line) => (
               <li key={line}>{line}</li>
             ))}

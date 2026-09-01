@@ -1,5 +1,4 @@
 import { ButtonLink } from "./Button";
-import { Mark } from "./Logo";
 
 /**
  * Shown where a feature needs environment keys that haven't been added yet.
@@ -13,15 +12,14 @@ export function NotConfigured({
   body: string;
 }) {
   return (
-    <div className="mx-auto max-w-md px-5 py-28 text-center sm:px-8">
-      <Mark className="mx-auto h-10 w-10 text-tan" />
-      <h1 className="mt-7 font-display text-3xl font-light text-graphite">
-        {title}
-      </h1>
-      <p className="mt-4 text-sm leading-relaxed text-slate">{body}</p>
-      <ButtonLink href="/shop" variant="outline" className="mt-9">
-        Back to the collection
-      </ButtonLink>
+    <div className="mx-auto max-w-md px-5 py-36 text-center sm:px-10">
+      <h1 className="section-title text-graphite">{title}</h1>
+      <p className="mt-7 text-sm leading-relaxed text-slate">{body}</p>
+      <div className="mt-11">
+        <ButtonLink href="/shop" variant="link">
+          Back to the collection
+        </ButtonLink>
+      </div>
     </div>
   );
 }

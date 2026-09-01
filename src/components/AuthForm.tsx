@@ -4,19 +4,25 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "./Button";
-import { Mark } from "./Logo";
 import { createClient } from "@/lib/supabase/client";
 import { SIGNUP_BONUS } from "@/lib/rewards";
 
 type Mode = "login" | "signup";
 
 const INPUT =
-  "w-full border border-sand bg-bone px-4 py-3 text-sm text-graphite placeholder:text-mist focus:border-gold focus:outline-none";
+  "w-full border border-parchment bg-bone px-4 py-4 text-sm text-graphite placeholder:text-mist focus:border-graphite focus:outline-none";
 
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/account";
+  /*
+   * New members land on /account with ?welcome=1, which is what surfaces the
+   * drop-alerts prompt. It rides on `next` so it survives the email
+   * confirmation round trip — the callback redirects to whatever this is.
+   */
+  const next =
+    searchParams.get("next") ??
+    (mode === "signup" ? "/account?welcome=1" : "/account");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -80,11 +86,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
   if (checkEmail) {
     return (
       <div className="text-center">
-        <Mark className="mx-auto h-10 w-10 text-gold" />
-        <h1 className="mt-7 font-display text-3xl font-light text-graphite">
-          Confirm your email
-        </h1>
-        <p className="mt-4 text-sm leading-relaxed text-slate">
+        <h1 className="section-title text-graphite">Confirm your email</h1>
+        <p className="mt-7 text-sm leading-relaxed text-slate">
           We&apos;ve sent a link to <span className="text-graphite">{email}</span>.
           Click it to finish joining the Circle — your {SIGNUP_BONUS} points are
           waiting.
@@ -96,11 +99,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
   return (
     <div>
       <div className="text-center">
-        <Mark className="mx-auto h-10 w-10 text-gold" />
-        <h1 className="mt-7 font-display text-4xl font-light text-graphite">
+        <h1 className="section-title text-graphite">
           {isSignup ? "Join the Circle" : "Sign in"}
         </h1>
-        <p className="mt-3 text-sm text-slate">
+        <p className="mt-7 text-sm leading-relaxed text-slate">
           {isSignup
             ? `${SIGNUP_BONUS} points the moment you join, and early access to every drop.`
             : "Your points, tier, and order history."}
@@ -159,7 +161,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         </div>
 
         {error && (
-          <p className="border border-tan bg-parchment/60 p-3 text-xs leading-relaxed text-graphite">
+          <p className="border-l border-clay p-3 text-xs leading-relaxed text-graphite">
             {error}
           </p>
         )}

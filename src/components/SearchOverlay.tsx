@@ -130,11 +130,11 @@ export function SearchOverlay() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 text-slate transition-colors hover:text-graphite"
+        className="flex items-center text-slate transition-opacity hover:opacity-55"
         aria-label="Search"
       >
-        <SearchIcon />
-        <span className="eyebrow hidden lg:inline">Search</span>
+        <SearchIcon className="sm:hidden" />
+        <span className="eyebrow hidden sm:inline">Search</span>
       </button>
 
       {open && (
@@ -153,9 +153,9 @@ export function SearchOverlay() {
             aria-label="Search Arkana"
             /* Deliberately not `animate-rise` — its 0.9s entrance is right for
                a hero, and far too slow for something you opened to type into. */
-            className="relative mx-auto mt-[12vh] w-[min(42rem,calc(100%-2rem))] border border-parchment bg-bone shadow-xl"
+            className="relative w-full border-b border-parchment bg-bone"
           >
-            <div className="flex items-center gap-3 border-b border-parchment px-5">
+            <div className="mx-auto flex max-w-3xl items-center gap-3 px-5">
               <SearchIcon className="shrink-0 text-ash" />
               <input
                 ref={inputRef}
@@ -167,27 +167,27 @@ export function SearchOverlay() {
                 autoComplete="off"
                 autoFocus
                 aria-label="Search Arkana"
-                className="w-full bg-transparent py-4 text-sm text-graphite placeholder:text-mist focus:outline-none"
+                className="w-full bg-transparent py-6 text-sm text-graphite placeholder:text-mist focus:outline-none"
               />
               <button
                 type="button"
                 onClick={close}
-                className="shrink-0 text-xs text-ash hover:text-slate"
+                className="eyebrow shrink-0 text-ash hover:text-slate"
               >
                 Esc
               </button>
             </div>
 
             {query.trim() === "" ? (
-              <div className="px-5 py-6">
+              <div className="mx-auto max-w-3xl px-5 py-8">
                 <p className="eyebrow text-clay">Try</p>
-                <ul className="mt-4 flex flex-wrap gap-2">
+                <ul className="mt-5 flex flex-wrap gap-2">
                   {SUGGESTED_QUERIES.map((suggestion) => (
                     <li key={suggestion}>
                       <button
                         type="button"
                         onClick={() => setQuery(suggestion)}
-                        className="border border-sand px-3 py-1.5 text-sm text-graphite transition-colors hover:border-gold hover:bg-linen"
+                        className="eyebrow border border-parchment px-4 py-2.5 text-graphite transition-colors hover:border-graphite"
                       >
                         {suggestion}
                       </button>
@@ -196,7 +196,7 @@ export function SearchOverlay() {
                 </ul>
               </div>
             ) : results.length === 0 ? (
-              <div className="px-5 py-8 text-center">
+              <div className="mx-auto max-w-3xl px-5 py-10 text-center">
                 <p className="text-sm text-slate">
                   Nothing matches &ldquo;{query.trim()}&rdquo;.
                 </p>
@@ -211,11 +211,11 @@ export function SearchOverlay() {
             ) : (
               <>
                 {relaxed && (
-                  <p className="border-b border-parchment px-5 py-3 text-xs text-ash">
+                  <p className="mx-auto max-w-3xl px-5 py-3 text-xs text-ash">
                     Nothing matched everything you typed — showing the closest.
                   </p>
                 )}
-                <div className="max-h-[52vh] overflow-y-auto">
+                <div className="mx-auto max-h-[52vh] max-w-3xl overflow-y-auto">
                   {results.map((result, i) => (
                     <div
                       key={`${result.kind}-${result.id}`}
@@ -229,7 +229,7 @@ export function SearchOverlay() {
                 <Link
                   href={`/search?q=${encodeURIComponent(query.trim())}`}
                   onClick={close}
-                  className="block border-t border-parchment px-5 py-3.5 text-center text-xs text-slate transition-colors hover:bg-linen hover:text-graphite"
+                  className="eyebrow block border-t border-parchment px-5 py-5 text-center text-slate transition-colors hover:text-graphite"
                 >
                   See all results for &ldquo;{query.trim()}&rdquo;
                 </Link>

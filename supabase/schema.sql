@@ -23,6 +23,14 @@ create table if not exists public.profiles (
 alter table public.profiles
   add column if not exists welcome_discount_used_at timestamptz;
 
+-- The same idea for the second-order discount, which is likewise a one-time
+-- perk: set when it is actually paid for, never cleared. Kept as its own column
+-- rather than inferred from the order count because the two must be able to
+-- disagree — an order placed while Stripe was refusing coupons still counts as
+-- an order, and the perk should survive it.
+alter table public.profiles
+  add column if not exists second_order_discount_used_at timestamptz;
+
 -- A tier bought outright rather than earned by spending. Written only by
 -- grant_membership() below, off the back of a paid Stripe session — never by
 -- the member, who has no UPDATE grant on these columns (see ADMIN section).
@@ -73,7 +81,25 @@ alter table public.orders
 alter table public.orders
   add column if not exists refunded_cents integer not null default 0;
 
+-- Fulfilment. Deliberately separate from `status`, which tracks the *money*
+-- (paid / partially_refunded / refunded) and is written by the Stripe webhook.
+-- Whether a parcel has left the studio is a different axis entirely: a refunded
+-- order may well have shipped, and a paid one may not have.
+--
+-- `fulfilled_at` null means it still needs packing, which is the whole queue.
+alter table public.orders
+  add column if not exists fulfilled_at timestamptz;
+alter table public.orders
+  add column if not exists tracking_carrier text;
+alter table public.orders
+  add column if not exists tracking_number text;
+
 create index if not exists orders_user_id_idx on public.orders (user_id, created_at desc);
+
+-- Partial index: the pack queue is the only thing that reads by this column,
+-- and it only ever wants the rows where it is null.
+create index if not exists orders_unfulfilled_idx
+  on public.orders (created_at) where fulfilled_at is null;
 create index if not exists orders_payment_intent_idx
   on public.orders (stripe_payment_intent);
 
@@ -529,6 +555,302 @@ alter table public.returns add column if not exists handled_by uuid
 alter table public.returns add column if not exists handled_at timestamptz;
 
 create index if not exists returns_status_idx on public.returns (status, created_at);
+
+-- ---------------------------------------------------------------------------
+-- Admin write access to orders, narrowed to fulfilment.
+--
+-- A policy scopes rows, not columns, so "admins may update orders" on its own
+-- would also let one rewrite `amount_total_cents` or `refunded_cents` and put
+-- the site permanently out of step with Stripe. The same column-grant trick used
+-- on `profiles` above fixes it: the policy says *who*, the grant says *what*.
+--
+-- The money columns stay writable only by the service role, i.e. the webhook.
+-- ---------------------------------------------------------------------------
+revoke update on public.orders from anon, authenticated;
+grant  update (fulfilled_at, tracking_carrier, tracking_number)
+  on public.orders to authenticated;
+
+drop policy if exists "admins fulfil orders" on public.orders;
+create policy "admins fulfil orders" on public.orders
+  for update using (public.is_admin(auth.uid()))
+          with check (public.is_admin(auth.uid()));
+
+-- ===========================================================================
+-- SMS — drop alerts
+--
+-- Two audiences: every consenting member hears about a drop, and Adept/Oracle
+-- members additionally get the exclusive early look. "Paid" is read as standing
+-- (see standingCents in src/lib/rewards.ts), so a bought tier and a spent-into
+-- tier are treated alike — the same rule the discounts use.
+--
+-- Consent is the load-bearing part of this section. US marketing SMS needs
+-- prior express written consent, and if it is ever challenged the burden of
+-- proof is on the sender. So consent is stored as *when, from where, and to
+-- which number* rather than a boolean, and every change is additionally written
+-- to an append-only log that nothing in the app can rewrite.
+-- ===========================================================================
+
+-- E.164, e.g. +14155552671. Null until a number is verified by OTP.
+alter table public.profiles add column if not exists phone text;
+alter table public.profiles add column if not exists phone_verified_at timestamptz;
+-- Non-null and with no later opt-out means "may be messaged".
+alter table public.profiles add column if not exists sms_consent_at timestamptz;
+alter table public.profiles add column if not exists sms_consent_source text;
+alter table public.profiles add column if not exists sms_opt_out_at timestamptz;
+
+-- One account per number. Without this a recycled or mistyped number could sit
+-- on several profiles at once and the same handset would get one message per
+-- profile — and an opt-out would only silence one of them.
+create unique index if not exists profiles_phone_key
+  on public.profiles (phone) where phone is not null;
+
+-- The set of people a broadcast actually goes to. Every audience query in the
+-- app funnels through this, so "verified, consented, not opted out" is stated
+-- once rather than re-derived per caller.
+create index if not exists profiles_sms_reachable_idx
+  on public.profiles (sms_consent_at)
+  where phone is not null
+    and phone_verified_at is not null
+    and sms_opt_out_at is null;
+
+-- ---------------------------------------------------------------------------
+-- sms_consent_log: append-only evidence trail. Written by the service role
+-- only, and deliberately never updated or deleted — this is the record you
+-- would produce if a complaint ever landed.
+-- ---------------------------------------------------------------------------
+create table if not exists public.sms_consent_log (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references public.profiles(id) on delete set null,
+  phone      text not null,
+  action     text not null,
+  -- Where it came from: 'account' | 'signup' | 'checkout' | 'sms_stop'
+  -- | 'sms_start' | 'number_reassigned'
+  source     text,
+  created_at timestamptz not null default now(),
+
+  -- 'attempted' is written when a code is *requested* and is not evidence of
+  -- anything — it exists so the verify route can rate limit per account. The
+  -- other four are the consent trail proper.
+  constraint sms_consent_log_action_check check (action in (
+    'attempted', 'verified', 'opted_in', 'opted_out', 'released'
+  ))
+);
+
+create index if not exists sms_consent_log_user_idx
+  on public.sms_consent_log (user_id, created_at desc);
+create index if not exists sms_consent_log_phone_idx
+  on public.sms_consent_log (phone, created_at desc);
+
+-- ---------------------------------------------------------------------------
+-- sms_broadcasts: one row per send. `audience` is snapshotted into
+-- sms_deliveries at queue time, so editing tiers later can't retarget a send
+-- that has already gone out.
+-- ---------------------------------------------------------------------------
+create table if not exists public.sms_broadcasts (
+  id              uuid primary key default gen_random_uuid(),
+  body            text not null,
+  audience        text not null,
+  created_by      uuid references public.profiles(id) on delete set null,
+  created_at      timestamptz not null default now(),
+  queued_at       timestamptz,
+  completed_at    timestamptz,
+  recipient_count integer not null default 0,
+
+  constraint sms_broadcasts_audience_check check (audience in ('all', 'paid'))
+);
+
+create index if not exists sms_broadcasts_created_idx
+  on public.sms_broadcasts (created_at desc);
+
+-- ---------------------------------------------------------------------------
+-- sms_deliveries: one row per recipient per broadcast.
+--
+-- The unique constraint is what makes sending safe to retry. A send is
+-- processed in batches so it fits inside a serverless request, which means it
+-- can be resumed — and resuming must never text anyone twice. Rows move
+-- queued -> sent | failed, and only queued rows are ever picked up.
+-- ---------------------------------------------------------------------------
+create table if not exists public.sms_deliveries (
+  id           uuid primary key default gen_random_uuid(),
+  broadcast_id uuid not null references public.sms_broadcasts(id) on delete cascade,
+  user_id      uuid references public.profiles(id) on delete set null,
+  phone        text not null,
+  status       text not null default 'queued',
+  provider_sid text,
+  error        text,
+  created_at   timestamptz not null default now(),
+  sent_at      timestamptz,
+
+  constraint sms_deliveries_status_check check (status in (
+    'queued', 'sent', 'failed'
+  )),
+  constraint sms_deliveries_once unique (broadcast_id, user_id)
+);
+
+create index if not exists sms_deliveries_pending_idx
+  on public.sms_deliveries (broadcast_id) where status = 'queued';
+
+-- ---------------------------------------------------------------------------
+-- Row-level security.
+--
+-- Members read their own consent history and nothing else. Admins read the
+-- broadcast tables. Nothing here is writable by any signed-in role at all: the
+-- phone and consent columns on `profiles` are already excluded by the
+-- `grant update (full_name)` above, and these three tables get no INSERT,
+-- UPDATE or DELETE policy — so every write goes through a route holding the
+-- service-role key, and a member cannot mark their own number verified.
+-- ---------------------------------------------------------------------------
+alter table public.sms_consent_log enable row level security;
+alter table public.sms_broadcasts  enable row level security;
+alter table public.sms_deliveries  enable row level security;
+
+drop policy if exists "read own consent log" on public.sms_consent_log;
+create policy "read own consent log" on public.sms_consent_log
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "admins read consent log" on public.sms_consent_log;
+create policy "admins read consent log" on public.sms_consent_log
+  for select using (public.is_admin(auth.uid()));
+
+drop policy if exists "admins read broadcasts" on public.sms_broadcasts;
+create policy "admins read broadcasts" on public.sms_broadcasts
+  for select using (public.is_admin(auth.uid()));
+
+drop policy if exists "admins read deliveries" on public.sms_deliveries;
+create policy "admins read deliveries" on public.sms_deliveries
+  for select using (public.is_admin(auth.uid()));
+
+-- ---------------------------------------------------------------------------
+-- Records a verified number against an account, atomically.
+--
+-- Handles the recycled-number case: US numbers get reassigned, so the person
+-- verifying today may be the second owner. The previous holder loses the number
+-- (and with it any reachability), which is both correct — they can no longer be
+-- reached there — and necessary, since the unique index would otherwise block
+-- the new owner permanently.
+--
+-- Verifying also clears any prior opt-out: someone who typed the code just now
+-- is asking to be messaged, whatever they did last year.
+-- ---------------------------------------------------------------------------
+create or replace function public.claim_verified_phone(
+  p_user_id uuid,
+  p_phone   text,
+  p_source  text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.sms_consent_log (user_id, phone, action, source)
+  select id, p_phone, 'released', 'number_reassigned'
+    from public.profiles
+   where phone = p_phone and id <> p_user_id;
+
+  update public.profiles
+     set phone = null,
+         phone_verified_at = null,
+         sms_consent_at = null,
+         sms_consent_source = null,
+         sms_opt_out_at = null
+   where phone = p_phone and id <> p_user_id;
+
+  update public.profiles
+     set phone = p_phone,
+         phone_verified_at = now(),
+         sms_consent_at = now(),
+         sms_consent_source = p_source,
+         sms_opt_out_at = null
+   where id = p_user_id;
+
+  insert into public.sms_consent_log (user_id, phone, action, source)
+  values (p_user_id, p_phone, 'verified', p_source),
+         (p_user_id, p_phone, 'opted_in', p_source);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Opting out. Keyed on the phone rather than the user so the inbound STOP
+-- webhook — which knows only a number — and the account page both land here.
+--
+-- The number itself is kept. Deleting it would lose the ability to honour the
+-- opt-out if the same person opted in again elsewhere, and would make the log
+-- the only record that they ever asked to stop.
+-- ---------------------------------------------------------------------------
+create or replace function public.record_sms_opt_out(
+  p_phone  text,
+  p_source text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.profiles
+     set sms_opt_out_at = now()
+   where phone = p_phone and sms_opt_out_at is null;
+
+  insert into public.sms_consent_log (user_id, phone, action, source)
+  select id, p_phone, 'opted_out', p_source
+    from public.profiles
+   where phone = p_phone;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Snapshots a broadcast's recipients into sms_deliveries and returns how many.
+--
+-- Doing this in one statement means the audience is fixed at the instant the
+-- send is queued: someone who opts out thirty seconds later is already in the
+-- list, and someone who opts in is not. Any other arrangement makes "how many
+-- people did this go to" unanswerable after the fact.
+--
+-- `p_tier_threshold_cents` is passed in rather than hardcoded so the Adept
+-- threshold keeps living in src/lib/rewards.ts.
+-- ---------------------------------------------------------------------------
+create or replace function public.queue_broadcast(
+  p_broadcast_id         uuid,
+  p_audience             text,
+  p_tier_threshold_cents integer
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  queued integer;
+begin
+  insert into public.sms_deliveries (broadcast_id, user_id, phone)
+  select p_broadcast_id, p.id, p.phone
+    from public.profiles p
+   where p.phone is not null
+     and p.phone_verified_at is not null
+     and p.sms_consent_at is not null
+     and p.sms_opt_out_at is null
+     and (
+       p_audience = 'all'
+       -- Spent their way in...
+       or coalesce(p.lifetime_spend_cents, 0) >= p_tier_threshold_cents
+       -- ...or bought a tier. `purchased_tier` is constrained to Adept or
+       -- Oracle, and the threshold passed in is Adept's, so any non-null value
+       -- here is at or above it by definition.
+       or p.purchased_tier is not null
+     )
+  on conflict (broadcast_id, user_id) do nothing;
+
+  get diagnostics queued = row_count;
+
+  update public.sms_broadcasts
+     set recipient_count = queued,
+         queued_at = now()
+   where id = p_broadcast_id;
+
+  return queued;
+end;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- Granting the first admin. Run this once, with your own email:

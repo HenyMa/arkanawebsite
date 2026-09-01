@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mark, Wordmark } from "./Logo";
+import { Wordmark } from "./Logo";
 import { CATEGORIES, categoryPath } from "@/lib/products";
 import { SHIPPING_SUMMARY } from "@/lib/shipping";
 
@@ -34,31 +34,33 @@ const COLUMNS = [
   },
 ];
 
+/**
+ * A light footer rather than a dark slab: the page keeps the same bone ground
+ * from the header to the last line, and hairlines do the dividing. Every label
+ * is micro-caps, so the footer reads as a directory instead of a panel.
+ */
 export function Footer() {
   return (
-    <footer className="mt-24 bg-graphite text-mist">
-      <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
-        <div className="grid gap-12 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+    <footer className="mt-32 border-t border-parchment px-5 sm:px-10">
+      <div className="mx-auto max-w-[110rem]">
+        <div className="grid gap-14 py-20 md:grid-cols-[1.6fr_repeat(3,1fr)]">
           <div>
-            <div className="flex items-center gap-2.5 text-bone">
-              <Mark className="h-7 w-7 text-gold-soft" />
-              <Wordmark />
-            </div>
-            <p className="mt-5 max-w-xs font-display text-lg leading-relaxed text-sand/80">
-              Heavyweight essentials, made in small batches. Fewer pieces, made
-              properly.
+            <Wordmark className="text-graphite" />
+            <p className="mt-8 max-w-[15rem] text-xs leading-relaxed text-slate">
+              Heavyweight essentials, made in small batches in northern
+              Portugal. Fewer pieces, made properly.
             </p>
           </div>
 
           {COLUMNS.map((col) => (
             <div key={col.heading}>
-              <h3 className="eyebrow text-gold-soft">{col.heading}</h3>
-              <ul className="mt-5 space-y-3">
+              <h3 className="eyebrow text-graphite">{col.heading}</h3>
+              <ul className="mt-7 space-y-4">
                 {col.links.map((link) => (
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-sm text-mist transition-colors hover:text-bone"
+                      className="eyebrow text-slate transition-opacity hover:opacity-55"
                     >
                       {link.label}
                     </Link>
@@ -69,14 +71,16 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-14 border-t border-white/10 pt-8">
-          <ul className="flex flex-wrap gap-x-8 gap-y-2 text-xs text-ash">
+        <div className="flex flex-col gap-5 border-t border-parchment py-10 sm:flex-row sm:items-center sm:justify-between">
+          <ul className="flex flex-wrap gap-x-8 gap-y-2">
             {SHIPPING_SUMMARY.map((line) => (
-              <li key={line}>{line}</li>
+              <li key={line} className="eyebrow text-ash">
+                {line}
+              </li>
             ))}
           </ul>
-          <p className="mt-6 text-xs text-ash">
-            © {new Date().getFullYear()} Arkana. All rights reserved.
+          <p className="eyebrow shrink-0 text-ash">
+            © {new Date().getFullYear()} Arkana
           </p>
         </div>
       </div>
