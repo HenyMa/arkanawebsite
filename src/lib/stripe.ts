@@ -25,80 +25,84 @@ export function isStripeConfigured(): boolean {
 }
 
 /**
- * The member welcome discount, as a reusable Stripe coupon.
+ * A member discount, as a reusable Stripe coupon.
  *
  * Created on first use under a fixed id and reused forever after, rather than
  * minting a throwaway coupon per checkout — otherwise the Stripe dashboard
  * fills with one coupon per order. `duration: "once"` means it applies to the
  * single payment it is attached to; eligibility is enforced by us, in the
- * checkout route, not by the coupon.
+ * checkout route, not by the coupon. The coupons themselves are unrestricted,
+ * so none of them may ever be exposed as a promotion code.
+ *
+ * A coupon's rate is fixed when it is created and `retrieve` never updates it,
+ * so every id below carries its rate. Changing a rate in rewards.ts therefore
+ * means a new id, not an edit — otherwise the site would advertise one figure
+ * and Stripe would take off another.
  */
-const WELCOME_COUPON_ID = "arkana-welcome-20";
+const coupons = new Map<string, Promise<Stripe.Coupon>>();
 
-let welcomeCoupon: Promise<Stripe.Coupon> | null = null;
+function getCoupon(
+  stripe: Stripe,
+  id: string,
+  percentOff: number,
+  name: string,
+): Promise<Stripe.Coupon> {
+  const cached = coupons.get(id);
+  if (cached) return cached;
 
+  const pending = stripe.coupons
+    .retrieve(id)
+    .catch(() =>
+      stripe.coupons.create({ id, percent_off: percentOff, duration: "once", name }),
+    )
+    .catch((err) => {
+      // Don't cache a rejection: a transient failure here should not disable
+      // the discount for the lifetime of the process.
+      coupons.delete(id);
+      throw err;
+    });
+
+  coupons.set(id, pending);
+  return pending;
+}
+
+/**
+ * The welcome discount on a member's first order.
+ *
+ * The id is the original, unsuffixed one rather than a rate-derived one like
+ * the coupon below: it is already live in Stripe against real orders, and
+ * renaming it would strand that reporting behind a second coupon meaning the
+ * same thing. It still has to change if WELCOME_DISCOUNT_PERCENT ever does.
+ */
 export function getWelcomeCoupon(
   stripe: Stripe,
   percentOff: number,
 ): Promise<Stripe.Coupon> {
-  if (!welcomeCoupon) {
-    welcomeCoupon = stripe.coupons
-      .retrieve(WELCOME_COUPON_ID)
-      .catch(() =>
-        stripe.coupons.create({
-          id: WELCOME_COUPON_ID,
-          percent_off: percentOff,
-          duration: "once",
-          name: `Arkana Circle — ${percentOff}% welcome`,
-        }),
-      )
-      .catch((err) => {
-        // Don't cache a rejection: a transient failure here should not disable
-        // the discount for the lifetime of the process.
-        welcomeCoupon = null;
-        throw err;
-      });
-  }
-  return welcomeCoupon;
+  return getCoupon(
+    stripe,
+    "arkana-welcome-20",
+    percentOff,
+    `Arkana Circle — ${percentOff}% welcome`,
+  );
 }
 
 /**
- * The Adept/Oracle discount, as a reusable Stripe coupon.
+ * The one-time discount on a member's second order.
  *
- * Same reasoning as the welcome coupon: one fixed coupon reused forever rather
- * than one per checkout. Eligibility is decided in the checkout route — the
- * coupon itself is unrestricted, so it must never be exposed as a promotion
- * code.
- *
- * A coupon's rate is fixed when it is created and `retrieve` never updates it,
- * so changing MEMBER_DISCOUNT_PERCENT means changing this id too. Otherwise the
- * site would advertise one figure and Stripe would take off another.
+ * Two rates are in play (the base one and the higher Adept/Oracle one), so this
+ * resolves to two distinct coupons — which also means the Stripe dashboard
+ * reports on them separately.
  */
-const MEMBER_COUPON_ID = "arkana-member-10pct";
-
-let memberCoupon: Promise<Stripe.Coupon> | null = null;
-
-export function getMemberCoupon(
+export function getSecondOrderCoupon(
   stripe: Stripe,
   percentOff: number,
 ): Promise<Stripe.Coupon> {
-  if (!memberCoupon) {
-    memberCoupon = stripe.coupons
-      .retrieve(MEMBER_COUPON_ID)
-      .catch(() =>
-        stripe.coupons.create({
-          id: MEMBER_COUPON_ID,
-          percent_off: percentOff,
-          duration: "once",
-          name: `Arkana Circle — ${percentOff}% member`,
-        }),
-      )
-      .catch((err) => {
-        memberCoupon = null;
-        throw err;
-      });
-  }
-  return memberCoupon;
+  return getCoupon(
+    stripe,
+    `arkana-second-order-${percentOff}pct`,
+    percentOff,
+    `Arkana Circle — ${percentOff}% second order`,
+  );
 }
 
 /** Absolute site origin, used to build Checkout success and cancel URLs. */

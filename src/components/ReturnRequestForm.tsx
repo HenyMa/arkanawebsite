@@ -166,7 +166,7 @@ export function ReturnRequestForm({
                     {checked && item.returnable > 1 && (
                       <div className="mt-4 flex items-center gap-3">
                         <span className="text-xs text-slate">Quantity</span>
-                        <div className="flex items-center border border-sand">
+                        <div className="flex items-center border border-parchment">
                           <button
                             type="button"
                             onClick={() => setQuantity(item, quantity - 1)}
@@ -214,7 +214,7 @@ export function ReturnRequestForm({
                 className={`border px-4 py-3 text-left text-sm transition-colors ${
                   reason === option.value
                     ? "border-graphite bg-graphite text-bone"
-                    : "border-sand text-graphite hover:border-gold"
+                    : "border-parchment text-graphite hover:border-graphite"
                 }`}
               >
                 {option.label}
@@ -237,7 +237,7 @@ export function ReturnRequestForm({
             rows={4}
             maxLength={1000}
             placeholder="Tell us what happened — it helps us cut better next time."
-            className="mt-4 w-full border border-sand bg-bone px-4 py-3 text-sm text-graphite placeholder:text-mist focus:border-gold focus:outline-none"
+            className="mt-4 w-full border border-parchment bg-bone px-4 py-3 text-sm text-graphite placeholder:text-mist focus:border-graphite focus:outline-none"
           />
         </div>
       </div>
@@ -298,7 +298,7 @@ export function ReturnRequestForm({
         </Button>
 
         {error && (
-          <p className="mt-4 border border-tan bg-parchment/60 p-3 text-xs leading-relaxed text-graphite">
+          <p className="mt-4 border-l border-clay p-3 text-xs leading-relaxed text-graphite">
             {error}
           </p>
         )}

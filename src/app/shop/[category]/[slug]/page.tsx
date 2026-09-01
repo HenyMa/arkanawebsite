@@ -58,90 +58,107 @@ export default async function ProductPage({ params }: Params) {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
-      <nav className="text-xs text-ash">
-        <Link href="/shop" className="hover:text-slate">
+    <div className="px-5 py-10 sm:px-10">
+      <nav className="eyebrow text-ash">
+        <Link href="/shop" className="transition-opacity hover:opacity-55">
           Shop
         </Link>
-        <span className="mx-2">/</span>
-        <Link href={categoryPath(category.slug)} className="hover:text-slate">
+        <span className="mx-3">/</span>
+        <Link
+          href={categoryPath(category.slug)}
+          className="transition-opacity hover:opacity-55"
+        >
           {category.name}
         </Link>
-        <span className="mx-2">/</span>
+        <span className="mx-3">/</span>
         <span className="text-slate">{product.name}</span>
       </nav>
 
-      <div className="mt-8 grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-20">
+      <div className="mt-10 grid gap-14 lg:grid-cols-[1.4fr_1fr] lg:gap-24">
         <ProductGallery
           images={product.images}
           alt={`${product.name} in ${product.colorway}`}
         />
 
-        <div className="lg:sticky lg:top-32 lg:self-start">
-          <p className="eyebrow text-clay">{product.colorway}</p>
-          <h1 className="mt-3 font-display text-4xl font-light text-graphite sm:text-5xl">
-            {product.name}
-          </h1>
-          <p className="mt-4 text-lg tabular-nums text-slate">
+        {/* The buy column stays put while the image stack scrolls past it. */}
+        <div className="lg:sticky lg:top-28 lg:self-start lg:pt-10">
+          <h1 className="section-title text-graphite">{product.name}</h1>
+          <p className="eyebrow mt-4 tabular-nums text-slate">
             {formatPrice(product.priceCents)}
           </p>
+          <p className="eyebrow mt-2 text-mist">{product.colorway}</p>
 
-          <p className="mt-7 text-[0.95rem] leading-relaxed text-slate">
+          <p className="mt-9 max-w-md text-sm leading-relaxed text-slate">
             {product.description}
           </p>
 
-          <div className="mt-9">
+          <div className="mt-11">
             <ProductPurchase product={product} />
           </div>
 
-          <p className="mt-5 text-center text-xs text-ash">
+          <p className="eyebrow mt-6 text-ash">
             Earns {pointsEarned} points ·{" "}
-            <Link href="/rewards" className="text-gold-deep link-underline">
+            <Link href="/rewards" className="link-underline text-slate">
               The Arkana Circle
             </Link>
           </p>
 
-          <div className="mt-10 border-t border-parchment pt-8">
-            <h2 className="eyebrow text-clay">Details</h2>
-            <ul className="mt-4 space-y-2.5 text-sm text-slate">
-              {product.details.map((detail) => (
-                <li key={detail} className="flex gap-3">
-                  <span
-                    className="mt-2 h-px w-4 shrink-0 bg-tan"
-                    aria-hidden="true"
-                  />
-                  {detail}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/*
+            Details and shipping are collapsed by default. Native <details>
+            keeps this a server component and works without JavaScript.
+          */}
+          <div className="mt-14">
+            <details className="group border-t border-parchment">
+              <summary className="eyebrow flex cursor-pointer list-none items-center justify-between py-5 text-graphite marker:content-none">
+                Details
+                <span
+                  aria-hidden="true"
+                  className="text-ash transition-transform duration-300 group-open:rotate-45"
+                >
+                  +
+                </span>
+              </summary>
+              <ul className="space-y-3 pb-7 text-xs leading-relaxed text-slate">
+                {product.details.map((detail) => (
+                  <li key={detail}>{detail}</li>
+                ))}
+              </ul>
+            </details>
 
-          <div className="mt-8 border-t border-parchment pt-8">
-            <h2 className="eyebrow text-clay">Shipping &amp; returns</h2>
-            <ul className="mt-4 space-y-2 text-sm text-slate">
-              {SHIPPING_SUMMARY.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-              <li>
-                Free returns within {RETURN_WINDOW_DAYS} days, unworn with tags
-                attached —{" "}
-                <Link href="/shipping" className="text-gold-deep link-underline">
-                  how returns work
-                </Link>
-                .
-              </li>
-            </ul>
+            <details className="group border-y border-parchment">
+              <summary className="eyebrow flex cursor-pointer list-none items-center justify-between py-5 text-graphite marker:content-none">
+                Shipping &amp; returns
+                <span
+                  aria-hidden="true"
+                  className="text-ash transition-transform duration-300 group-open:rotate-45"
+                >
+                  +
+                </span>
+              </summary>
+              <ul className="space-y-3 pb-7 text-xs leading-relaxed text-slate">
+                {SHIPPING_SUMMARY.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+                <li>
+                  Free returns within {RETURN_WINDOW_DAYS} days, unworn with
+                  tags attached —{" "}
+                  <Link href="/shipping" className="link-underline text-graphite">
+                    how returns work
+                  </Link>
+                  .
+                </li>
+              </ul>
+            </details>
           </div>
         </div>
       </div>
 
       {others.length > 0 && (
-        <section className="mt-28">
-          <div className="rule-gold" />
-          <h2 className="mt-10 font-display text-3xl font-light text-graphite">
+        <section className="mt-32 border-t border-parchment pt-20">
+          <h2 className="section-title text-center text-graphite">
             More {category.name.toLowerCase()}
           </h2>
-          <div className="mt-8 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-16 grid gap-x-10 gap-y-20 sm:grid-cols-2 lg:grid-cols-3">
             {others.map((p) => (
               <ProductCard key={p.slug} product={p} />
             ))}

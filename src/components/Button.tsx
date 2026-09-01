@@ -2,8 +2,12 @@ import Link from "next/link";
 
 /**
  * Button treatments used across the site: a solid graphite `primary` and a
- * hairline `outline`, plus `*OnDark` counterparts for the graphite sections.
- * All share the same uppercase tracked label.
+ * hairline `outline`, plus `*OnDark` counterparts for the graphite sections,
+ * and a `link` variant that is nothing but tracked text over a rule.
+ *
+ * Everything is squared off, set in the same micro uppercase as the rest of
+ * the interface, and sized generously — a call to action here is a line of
+ * type with room around it, not a filled pill.
  *
  * Colours belong in a variant, never in a caller's `className`. Tailwind
  * emits every utility at the same specificity, so which one wins depends on
@@ -11,19 +15,19 @@ import Link from "next/link";
  * — an override like `text-bone` on top of `text-graphite` silently loses.
  */
 const BASE =
-  "inline-flex items-center justify-center gap-2 px-8 py-3.5 text-[0.7rem] font-medium uppercase tracking-[0.22em] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-45";
+  "inline-flex items-center justify-center gap-2 text-[0.625rem] font-normal uppercase tracking-[0.3em] transition-all duration-500 disabled:cursor-not-allowed disabled:opacity-40";
+
+const PADDED = `${BASE} px-10 py-4`;
 
 const VARIANTS = {
-  primary:
-    "bg-graphite text-bone hover:bg-gold-deep",
-  outline:
-    "border border-tan text-graphite hover:border-gold hover:bg-linen",
-  ghost:
-    "text-slate hover:text-graphite",
-  primaryOnDark:
-    "bg-gold text-graphite hover:bg-gold-soft",
-  outlineOnDark:
-    "border border-white/25 text-bone hover:border-gold-soft hover:bg-white/5",
+  primary: `${PADDED} bg-graphite text-bone hover:bg-graphite/85`,
+  outline: `${PADDED} border border-graphite text-graphite hover:bg-graphite hover:text-bone`,
+  ghost: `${PADDED} border border-parchment text-slate hover:border-graphite hover:text-graphite`,
+  primaryOnDark: `${PADDED} bg-bone text-graphite hover:bg-sand`,
+  outlineOnDark: `${PADDED} border border-bone/40 text-bone hover:border-bone hover:bg-bone hover:text-graphite`,
+  /** Text-only call to action sitting on a hairline. */
+  link: `${BASE} link-rule text-graphite`,
+  linkOnDark: `${BASE} link-rule text-bone`,
 } as const;
 
 export type Variant = keyof typeof VARIANTS;
@@ -33,9 +37,7 @@ export function Button({
   className = "",
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
-  return (
-    <button className={`${BASE} ${VARIANTS[variant]} ${className}`} {...props} />
-  );
+  return <button className={`${VARIANTS[variant]} ${className}`} {...props} />;
 }
 
 export function ButtonLink({
@@ -50,7 +52,7 @@ export function ButtonLink({
   children: React.ReactNode;
 }) {
   return (
-    <Link href={href} className={`${BASE} ${VARIANTS[variant]} ${className}`}>
+    <Link href={href} className={`${VARIANTS[variant]} ${className}`}>
       {children}
     </Link>
   );

@@ -18,10 +18,14 @@ export function Mark({ className = "" }: { className?: string }) {
   );
 }
 
+/**
+ * The wordmark. Heavily tracked, with the trailing letter-space pulled back by
+ * a negative margin so the mark optically centres in the header.
+ */
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
     <span
-      className={`font-display text-[1.05rem] leading-none tracking-[0.28em] sm:text-[1.35rem] sm:tracking-[0.42em] ${className}`}
+      className={`font-display -mr-[0.3em] text-[1rem] font-normal leading-none tracking-[0.3em] sm:-mr-[0.42em] sm:text-[1.15rem] sm:tracking-[0.42em] ${className}`}
     >
       ARKANA
     </span>

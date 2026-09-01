@@ -110,6 +110,8 @@ Vercel is the path of least resistance:
 | Categories and their prices, products, sizes, stock | `src/lib/products.ts` |
 | Product photography | `public/products/` (see below) |
 | Shipping rates and countries | `src/lib/shipping.ts` |
+| Carriers offered when marking an order shipped | `src/lib/orders.ts` |
+| Drop-alert opt-in copy and consent wording | `src/components/SmsAlerts.tsx` |
 | Points rates, tiers, joining bonus, discounts, membership prices | `src/lib/rewards.ts` |
 | Return window, reasons, statuses | `src/lib/returns.ts` |
 | Who is an admin | `public.admins` table (see below) |
@@ -212,21 +214,40 @@ it was.
 ### Changing rewards rules
 
 Everything lives in `src/lib/rewards.ts` — points per dollar, the tier
-thresholds and multipliers, the redemption rate, the flat member discount, and
+thresholds and multipliers, the redemption rate, both one-time discounts, and
 what Adept and Oracle cost to buy. The marketing copy on `/rewards` reads from
 those same constants, so it can't drift out of sync.
 
-Three values are duplicated outside that file, each because something other
+There are two automatic discounts, and both are one-time:
+
+| Order | Rate | Burn flag on `profiles` |
+| --- | --- | --- |
+| First as a member | `WELCOME_DISCOUNT_PERCENT` (20%) | `welcome_discount_used_at` |
+| Second, below Adept | `SECOND_ORDER_DISCOUNT_PERCENT` (10%) | `second_order_discount_used_at` |
+| Second, Adept or Oracle | `TIER_SECOND_ORDER_DISCOUNT_PERCENT` (20%) | `second_order_discount_used_at` |
+
+They never compete: one is offered only to an account with no orders and the
+other only to one with exactly one, so they're mutually exclusive by
+construction — which suits Stripe Checkout's one-coupon-per-session limit. Each
+is gated on both the order count *and* its own flag, and the flag is set only by
+the webhook once payment clears. An abandoned checkout therefore leaves the perk
+intact, and an order that went through without its coupon doesn't consume it.
+
+Which rate a member gets on their second order follows `standingCents()`, so a
+bought Adept and a spent-into Adept are treated identically.
+
+Three values are duplicated outside `rewards.ts`, each because something other
 than app code needs them:
 
 - the 100-point joining bonus, in the `handle_new_user()` trigger
   (`supabase/schema.sql`) — the database grants it;
 - the tier names, in `tier_rank()` and the `check` constraints in the same file
   — the database enforces that a membership can only ever move someone up;
-- `MEMBER_DISCOUNT_PERCENT`, in the Stripe coupon `arkana-member-10pct`. A
-  coupon's rate is fixed when Stripe creates it, so changing the constant means
-  changing the coupon id in `src/lib/stripe.ts` too — otherwise the site
-  advertises one figure and Stripe takes off another.
+- every discount rate, in its Stripe coupon id (`arkana-welcome-20`,
+  `arkana-second-order-10pct`, `arkana-second-order-20pct`). A coupon's rate is
+  fixed when Stripe creates it, so changing a constant means changing the
+  coupon id in `src/lib/stripe.ts` too — otherwise the site advertises one
+  figure and Stripe takes off another.
 
 ### Tiers you can buy
 
@@ -243,12 +264,78 @@ to downgrade. Memberships are recorded in their own table rather than `orders`:
 they have no items, earn no points, move no lifetime spend, and can't be
 returned.
 
-Adept and Oracle also get a percentage off **every** order. It competes with the
-20% welcome discount rather than stacking — Stripe Checkout takes one coupon per
-session — and the larger of the two wins, compared in cents. At the current
-rates the welcome discount always takes a member's first order and the member
-discount every order after. If the welcome discount loses it isn't burned, so it
-survives for next time.
+Adept and Oracle also get the higher rate on their second-order discount — see
+the table above.
+
+### Packing and shipping
+
+Stripe collects and validates the shipping address at checkout, and the
+`checkout.session.completed` webhook stores it on `orders.shipping`. `/admin/orders`
+is the queue: it opens on **To pack** (anything with `fulfilled_at` null,
+oldest first) and shows each order's line items with sizes next to the address
+to write on the label. Marking one shipped records the carrier and tracking
+number, which then appear on the member's account page as a tracking link.
+
+Fulfilment is deliberately a separate axis from `orders.status`, which tracks
+money and is written only by the webhook — a refunded order may well have
+shipped, and a paid one may not have.
+
+Admins can write `fulfilled_at`, `tracking_carrier` and `tracking_number` and
+nothing else: the RLS policy says *who*, and a column-level grant says *what*,
+the same pairing used on `profiles`. The money columns stay writable only by the
+service role.
+
+Buying and printing the labels themselves is still manual, and nothing emails
+the tracking number out — `/shipping` promises that it does, so that copy is
+ahead of the code.
+
+### Drop alerts (SMS)
+
+`/admin/drops` writes a message, picks an audience, and sends. Two audiences:
+**every member** who has opted in, and **Adept & Oracle** for the exclusive
+early look. "Paid" means standing, so a bought tier and a spent-into tier both
+count — the same rule the discounts use.
+
+Runs on Twilio, over `fetch` rather than the SDK (`src/lib/sms.ts`); the pure
+helpers live in `src/lib/sms-format.ts` so Client Components can count message
+segments without pulling `node:crypto` into the bundle. All four `TWILIO_*` vars
+are optional: without them the feature switches off cleanly rather than
+half-working.
+
+**Consent is the load-bearing part.** US marketing SMS needs prior express
+written consent, and if it is challenged the burden of proof is on you. So:
+
+- a number is only reachable after a **one-time code** proves it belongs to the
+  person entering it — this is also what stops a mistyped digit texting an
+  uninvolved stranger for months;
+- consent is stored as *when, from where, and to which number*, not a boolean,
+  and every change is additionally appended to `sms_consent_log`, which has no
+  UPDATE or DELETE policy for anyone;
+- **STOP is wired from day one.** Twilio and the carriers honour it before our
+  code runs; `/api/webhooks/twilio` keeps our copy of that state honest so an
+  opted-out number is never queued again. The signature is verified — without
+  that check, anyone who learned the URL could unsubscribe an arbitrary number;
+- nothing in the studio can add someone to the list. Every write goes through
+  the service-role key, and `profiles` grants `authenticated` update on
+  `full_name` alone, so a member can't mark their own number verified either.
+
+Members opt in from `/account`, from the welcome prompt after signing up
+(`/account?welcome=1`), and from `/success` after an order. Stripe collects a
+phone number at checkout for the carrier — that is **not** reused as consent and
+is never copied into `profiles.phone`.
+
+Sending is split in two on purpose. `POST /api/admin/sms` snapshots the
+recipients into `sms_deliveries` and sends nothing; `POST /api/admin/sms/send`
+works through them 25 at a time, and the composer calls it until the queue is
+empty. That is what makes a send survive a serverless timeout: the recipient
+list is durable, each row is claimed before its message goes out, and
+`unique (broadcast_id, user_id)` means resuming can't text anyone twice. The
+worst case is someone misses a drop, never that they get it twice.
+
+Before any of this reaches a real handset you need **A2P 10DLC brand and
+campaign registration** in the Twilio console. Unregistered traffic gets
+filtered or blocked by the carriers, and approval takes days to weeks. Nothing
+in the code can shortcut that.
 
 ---
 
@@ -317,5 +404,10 @@ when you want them:
   pages, not a member's own orders.
 - **Real inventory.** Stock is the `inStock` array per product, edited by hand;
   nothing decrements on purchase or prevents overselling.
-- **Transactional email** beyond Stripe's own receipt, and shipping labels,
-  which you buy manually from the order details.
+- **Transactional email** beyond Stripe's own receipt. Notably, nothing emails
+  a member their tracking number once you mark an order shipped — you record it
+  in the studio and they see it on their account page, but the "we'll email you
+  tracking" line on `/shipping` isn't true yet.
+- **Buying shipping labels.** `/admin/orders` gives you the pack list and the
+  address; you still buy and print the label yourself and paste the tracking
+  number back in.

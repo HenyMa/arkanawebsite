@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/admin/returns", label: "Returns" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/members", label: "Members" },
+  { href: "/admin/drops", label: "Drops" },
 ];
 
 export function AdminNav({ email }: { email: string | null }) {

@@ -65,17 +65,14 @@ const RETURN_STEPS = [
 
 export default function ShippingPage() {
   return (
-    <div className="mx-auto max-w-3xl px-5 py-20 sm:px-8">
-      <p className="eyebrow text-clay">Help</p>
-      <h1 className="mt-3 font-display text-5xl font-light text-graphite">
+    <div className="mx-auto max-w-3xl px-5 py-20 sm:px-10 sm:py-28">
+      <h1 className="section-title text-center text-graphite">
         Shipping &amp; returns
       </h1>
 
-      <div className="rule-gold mt-10" />
-
-      <div className="mt-10 border border-parchment bg-linen/60 p-7">
-        <h2 className="eyebrow text-clay">Rates</h2>
-        <ul className="mt-4 space-y-2 text-sm text-slate">
+      <div className="mt-16 border-t border-parchment pt-7">
+        <h2 className="eyebrow text-graphite">Rates</h2>
+        <ul className="mt-5 space-y-2 text-xs text-slate">
           {SHIPPING_SUMMARY.map((line) => (
             <li key={line}>{line}</li>
           ))}
@@ -85,10 +82,8 @@ export default function ShippingPage() {
 
       {/* ------------------------------------------------------------- Returns */}
       <section className="mt-16">
-        <h2 className="font-display text-3xl font-light text-graphite">
-          Returns
-        </h2>
-        <p className="mt-4 text-[0.95rem] leading-relaxed text-slate">
+        <h2 className="section-title text-graphite">Returns</h2>
+        <p className="mt-6 text-sm leading-relaxed text-slate">
           Unworn pieces with tags attached can be returned within{" "}
           {RETURN_WINDOW_DAYS} days for a full refund — {EXTENDED_RETURN_WINDOW_DAYS}{" "}
           days for Adept and Oracle members. Return postage is on us within the
@@ -98,15 +93,11 @@ export default function ShippingPage() {
 
         <ol className="mt-10 space-y-8">
           {RETURN_STEPS.map((step) => (
-            <li key={step.n} className="flex gap-6">
-              <span className="font-display text-4xl font-light text-sand">
-                {step.n}
-              </span>
+            <li key={step.n} className="flex gap-8 border-t border-parchment pt-6">
+              <span className="eyebrow shrink-0 text-mist">{step.n}</span>
               <div>
-                <h3 className="font-display text-xl text-graphite">
-                  {step.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate">
+                <h3 className="eyebrow text-graphite">{step.title}</h3>
+                <p className="mt-4 text-xs leading-relaxed text-slate">
                   {step.body}
                 </p>
               </div>
@@ -114,14 +105,16 @@ export default function ShippingPage() {
           ))}
         </ol>
 
-        <div className="mt-10 border border-parchment bg-linen/60 p-7">
+        <div className="mt-12 border-t border-parchment pt-8">
           <p className="text-sm leading-relaxed text-slate">
             Returns are opened from your account — no email needed, and you can
             track where yours has got to at any point.
           </p>
-          <ButtonLink href="/account" variant="outline" className="mt-6">
-            Start a return
-          </ButtonLink>
+          <div className="mt-7">
+            <ButtonLink href="/account" variant="link">
+              Start a return
+            </ButtonLink>
+          </div>
         </div>
 
         <dl className="mt-12 divide-y divide-parchment border-t border-parchment">
@@ -151,9 +144,9 @@ export default function ShippingPage() {
               "Write to us anyway. The window is a policy, not a rule we enjoy enforcing.",
             ],
           ].map(([q, a]) => (
-            <div key={q} className="py-6">
-              <dt className="font-display text-xl text-graphite">{q}</dt>
-              <dd className="mt-2 text-sm leading-relaxed text-slate">{a}</dd>
+            <div key={q} className="py-8">
+              <dt className="eyebrow text-graphite">{q}</dt>
+              <dd className="mt-4 text-xs leading-relaxed text-slate">{a}</dd>
             </div>
           ))}
         </dl>
@@ -162,10 +155,8 @@ export default function ShippingPage() {
       <div className="mt-12 divide-y divide-parchment border-t border-parchment">
         {SECTIONS.map((section) => (
           <section key={section.heading} className="py-8">
-            <h2 className="font-display text-2xl text-graphite">
-              {section.heading}
-            </h2>
-            <p className="mt-3 text-[0.95rem] leading-relaxed text-slate">
+            <h2 className="eyebrow text-graphite">{section.heading}</h2>
+            <p className="mt-4 text-xs leading-relaxed text-slate">
               {section.body}
             </p>
           </section>
@@ -173,11 +164,11 @@ export default function ShippingPage() {
       </div>
 
       <section className="border-t border-parchment py-8">
-        <h2 className="font-display text-2xl text-graphite">Where we ship</h2>
-        <p className="mt-3 text-sm leading-relaxed text-slate">
+        <h2 className="eyebrow text-graphite">Where we ship</h2>
+        <p className="mt-4 text-xs leading-relaxed text-slate">
           {COUNTRIES.map((c) => COUNTRY_NAMES[c] ?? c).join(", ")}. Somewhere
           else?{" "}
-          <Link href="/about" className="link-underline text-gold-deep">
+          <Link href="/about" className="link-underline text-graphite">
             Write to us
           </Link>{" "}
           and we&apos;ll usually find a way.

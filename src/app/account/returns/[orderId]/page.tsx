@@ -132,7 +132,7 @@ export default async function StartReturnPage({ params }: Params) {
 
       <header className="mt-8">
         <p className="eyebrow text-clay">Returns</p>
-        <h1 className="mt-3 font-display text-4xl font-light text-graphite sm:text-5xl">
+        <h1 className="display-line-sm mt-5 text-graphite">
           Start a return
         </h1>
         <p className="mt-4 text-sm text-slate">

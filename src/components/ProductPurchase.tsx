@@ -47,10 +47,10 @@ export function ProductPurchase({ product }: { product: Product }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-4">
-        <p className="eyebrow text-clay">Size</p>
+        <p className="eyebrow text-graphite">Size</p>
         <button
           type="button"
-          className="text-xs text-ash underline underline-offset-4 hover:text-slate"
+          className="eyebrow text-ash transition-opacity hover:opacity-55"
           onClick={() => setGuideOpen((o) => !o)}
           aria-expanded={guideOpen}
         >
@@ -59,13 +59,15 @@ export function ProductPurchase({ product }: { product: Product }) {
       </div>
 
       {guideOpen && (
-        <p className="animate-rise mt-3 border-l border-tan pl-4 text-xs leading-relaxed text-slate">
+        <p className="animate-rise mt-4 text-xs leading-relaxed text-slate">
           {FIT_NOTES[product.category] ??
             "Between sizes? Take the smaller for a closer fit, the larger for a relaxed one."}
         </p>
       )}
 
-      <div className="mt-3 grid grid-cols-5 gap-2">
+      {/* Hairline row of sizes: one shared grid, borders collapsed by a gap of
+          a single pixel over a parchment ground. */}
+      <div className="mt-5 grid grid-cols-5 gap-px bg-parchment">
         {SIZES.map((s) => {
           const available = product.inStock.includes(s);
           const selected = size === s;
@@ -79,12 +81,12 @@ export function ProductPurchase({ product }: { product: Product }) {
                 setError(false);
               }}
               aria-pressed={selected}
-              className={`border py-3 text-xs tracking-[0.12em] transition-colors ${
+              className={`py-4 text-[0.625rem] uppercase tracking-[0.2em] transition-colors duration-300 ${
                 selected
-                  ? "border-graphite bg-graphite text-bone"
+                  ? "bg-graphite text-bone"
                   : available
-                    ? "border-sand text-graphite hover:border-gold"
-                    : "cursor-not-allowed border-linen text-mist line-through"
+                    ? "bg-bone text-graphite hover:bg-linen"
+                    : "cursor-not-allowed bg-bone text-mist line-through"
               }`}
             >
               {s}
@@ -94,18 +96,18 @@ export function ProductPurchase({ product }: { product: Product }) {
       </div>
 
       {error && (
-        <p className="mt-3 text-xs text-gold-deep">Choose a size to continue.</p>
+        <p className="eyebrow mt-4 text-clay">Choose a size to continue.</p>
       )}
 
-      <div className="mt-7 flex flex-col gap-3">
+      <div className="mt-8 flex flex-col gap-4">
         <Button onClick={handleAdd} disabled={soldOut} className="w-full">
           {soldOut ? "Sold out" : "Add to cart"}
         </Button>
 
         {added && (
-          <p className="animate-rise text-center text-xs text-slate">
+          <p className="eyebrow animate-rise text-center text-slate">
             Added to your cart ·{" "}
-            <Link href="/cart" className="text-gold-deep link-underline">
+            <Link href="/cart" className="link-underline text-graphite">
               Check out
             </Link>
           </p>

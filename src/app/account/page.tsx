@@ -6,16 +6,18 @@ import { ButtonLink } from "@/components/Button";
 import { CancelReturnButton } from "@/components/CancelReturnButton";
 import { SignOutButton } from "@/components/SignOutButton";
 import { NotConfigured } from "@/components/NotConfigured";
+import { SmsAlerts } from "@/components/SmsAlerts";
 import { createClient } from "@/lib/supabase/server";
 import { getAdmin } from "@/lib/admin";
 import { formatPrice, productPathBySlug } from "@/lib/products";
+import { carrierName, trackingUrl } from "@/lib/orders";
 import {
-  MEMBER_DISCOUNT_PERCENT,
   MEMBERSHIP_PRICE_CENTS,
   REDEMPTION_THRESHOLD,
   REDEMPTION_VALUE_CENTS,
   WELCOME_DISCOUNT_PERCENT,
-  hasMemberDiscount,
+  secondOrderDiscountPercent,
+  isTierMember,
   isPurchasableTier,
   nextTierFor,
   standingCents,
@@ -58,7 +60,7 @@ type ReturnRow = {
 };
 
 type Props = {
-  searchParams: Promise<{ return?: string }>;
+  searchParams: Promise<{ return?: string; welcome?: string }>;
 };
 
 export default async function AccountPage({ searchParams }: Props) {
@@ -77,7 +79,11 @@ export default async function AccountPage({ searchParams }: Props) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/account");
 
-  const justOpenedReturn = (await searchParams).return === "opened";
+  const params = await searchParams;
+  const justOpenedReturn = params.return === "opened";
+  // Set by the sign-up redirect, so a brand-new member is asked about drop
+  // alerts once, prominently, rather than having to find the panel.
+  const justJoined = params.welcome === "1";
 
   /*
    * The admin entrance lives here rather than in the site header: the header is
@@ -95,14 +101,14 @@ export default async function AccountPage({ searchParams }: Props) {
       supabase
         .from("profiles")
         .select(
-          "full_name, email, points, lifetime_spend_cents, welcome_discount_used_at, purchased_tier",
+          "full_name, email, points, lifetime_spend_cents, welcome_discount_used_at, second_order_discount_used_at, purchased_tier, phone, phone_verified_at, sms_consent_at, sms_opt_out_at",
         )
         .eq("id", user.id)
         .single(),
       supabase
         .from("orders")
         .select(
-          "id, created_at, amount_total_cents, items, points_awarded, status, refunded_cents",
+          "id, created_at, amount_total_cents, items, points_awarded, status, refunded_cents, fulfilled_at, tracking_carrier, tracking_number",
         )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
@@ -158,9 +164,30 @@ export default async function AccountPage({ searchParams }: Props) {
   const redeemable = Math.floor(points / REDEMPTION_THRESHOLD);
   const windowDays = returnWindowDays(standing);
 
-  const hasOrdered = (orders?.length ?? 0) > 0;
+  /*
+   * Both one-time perks are keyed on how many orders this account has, which
+   * the query above caps at 20. Only 0 and 1 are ever compared against, so the
+   * cap can't affect the answer — but it does mean this must stay a comparison
+   * against small numbers rather than a general order count.
+   */
+  const orderCount = orders?.length ?? 0;
+  const hasOrdered = orderCount > 0;
   const welcomeDiscountAvailable =
     !profile?.welcome_discount_used_at && !hasOrdered;
+  const secondOrderDiscountAvailable =
+    !profile?.second_order_discount_used_at && orderCount === 1;
+
+  /*
+   * Reachable by SMS: a verified number, consent on record, and no opt-out
+   * since. All three are required — a number that was verified and then had
+   * STOP texted from it is still verified, and must not count.
+   */
+  const smsSubscribed = Boolean(
+    profile?.phone &&
+      profile?.phone_verified_at &&
+      profile?.sms_consent_at &&
+      !profile?.sms_opt_out_at,
+  );
 
   // Returns, grouped so each order can show what's already coming back.
   const returnsByOrder = new Map<string, ReturnRow[]>();
@@ -175,10 +202,10 @@ export default async function AccountPage({ searchParams }: Props) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow text-clay">Account</p>
-          <h1 className="mt-3 font-display text-4xl font-light text-graphite sm:text-5xl">
+          <h1 className="display-line-sm mt-5 text-graphite">
             {profile?.full_name?.trim() || "Welcome"}
           </h1>
-          <p className="mt-2 text-sm text-ash">{profile?.email ?? user.email}</p>
+          <p className="eyebrow mt-4 text-ash">{profile?.email ?? user.email}</p>
         </div>
         <div className="flex items-center gap-6">
           {admin && (
@@ -194,14 +221,14 @@ export default async function AccountPage({ searchParams }: Props) {
       </div>
 
       {justOpenedReturn && (
-        <p className="animate-rise mt-8 border border-gold bg-linen/60 px-6 py-4 text-sm leading-relaxed text-graphite">
+        <p className="animate-rise mt-8 border-l border-clay px-6 py-1 text-sm leading-relaxed text-graphite">
           Your return is open. We&apos;ll email a prepaid label within one
           business day — you&apos;ll find the reference below.
         </p>
       )}
 
       {welcomeDiscountAvailable && (
-        <p className="mt-8 border border-gold bg-linen/60 px-6 py-4 text-sm leading-relaxed text-graphite">
+        <p className="mt-8 border-l border-clay px-6 py-1 text-sm leading-relaxed text-graphite">
           <span className="text-gold-deep">
             {WELCOME_DISCOUNT_PERCENT}% off your first order
           </span>{" "}
@@ -210,22 +237,32 @@ export default async function AccountPage({ searchParams }: Props) {
         </p>
       )}
 
-      {hasMemberDiscount(standing) && (
-        <p className="mt-8 border border-parchment bg-linen/60 px-6 py-4 text-sm leading-relaxed text-graphite">
+      <div className="mt-8">
+        <SmsAlerts
+          source={justJoined ? "signup" : "account"}
+          phone={profile?.phone ?? null}
+          subscribed={smsSubscribed}
+          tierMember={isTierMember(standing)}
+          highlight={justJoined && !smsSubscribed}
+        />
+      </div>
+
+      {secondOrderDiscountAvailable && (
+        <p className="mt-8 border-l border-clay px-6 py-1 text-sm leading-relaxed text-graphite">
           <span className="text-gold-deep">
-            {MEMBER_DISCOUNT_PERCENT}% off every order
+            {secondOrderDiscountPercent(standing)}% off your second order
           </span>{" "}
-          comes with {tier.name}. It&apos;s taken off automatically at checkout,
-          on every order — not just your next one.
+          is waiting on your account. Like the first, it comes off automatically
+          at checkout — and it&apos;s the last one that does, so make it count.
         </p>
       )}
 
       {/* ------------------------------------------------------------- Standing */}
-      <section className="mt-12 border border-parchment bg-linen/60">
+      <section className="mt-12 border border-parchment">
         <div className="grid gap-px bg-parchment sm:grid-cols-3">
-          <div className="bg-linen/60 px-7 py-8">
+          <div className="bg-bone px-7 py-8">
             <p className="eyebrow text-clay">Points</p>
-            <p className="mt-3 font-display text-4xl text-graphite tabular-nums">
+            <p className="display-line-sm mt-4 text-graphite tabular-nums">
               {points.toLocaleString()}
             </p>
             <p className="mt-2 text-xs text-ash">
@@ -234,17 +271,17 @@ export default async function AccountPage({ searchParams }: Props) {
                 : `${(REDEMPTION_THRESHOLD - points).toLocaleString()} more for ${formatPrice(REDEMPTION_VALUE_CENTS)} off`}
             </p>
           </div>
-          <div className="bg-linen/60 px-7 py-8">
+          <div className="bg-bone px-7 py-8">
             <p className="eyebrow text-clay">Tier</p>
-            <p className="mt-3 font-display text-4xl text-gold-deep">{tier.name}</p>
+            <p className="display-line-sm mt-4 text-graphite">{tier.name}</p>
             <p className="mt-2 text-xs text-ash">
               {tier.multiplier}× points per dollar
               {purchasedTier === tier.name && " · membership"}
             </p>
           </div>
-          <div className="bg-linen/60 px-7 py-8">
+          <div className="bg-bone px-7 py-8">
             <p className="eyebrow text-clay">Lifetime</p>
-            <p className="mt-3 font-display text-4xl text-graphite tabular-nums">
+            <p className="display-line-sm mt-4 text-graphite tabular-nums">
               {formatPrice(spend)}
             </p>
             <p className="mt-2 text-xs text-ash">
@@ -302,7 +339,7 @@ export default async function AccountPage({ searchParams }: Props) {
 
       {/* --------------------------------------------------------------- Orders */}
       <section className="mt-16">
-        <h2 className="font-display text-3xl font-light text-graphite">Orders</h2>
+        <h2 className="section-title text-graphite">Orders</h2>
         <div className="rule-gold mt-6" />
 
         {!orders || orders.length === 0 ? (
@@ -355,6 +392,38 @@ export default async function AccountPage({ searchParams }: Props) {
                       )}
                     </p>
                   </div>
+
+                  {order.fulfilled_at && (
+                    <p className="mt-3 text-xs text-ash">
+                      Shipped{" "}
+                      {new Date(order.fulfilled_at).toLocaleDateString("en-US", {
+                        dateStyle: "long",
+                      })}
+                      {carrierName(order.tracking_carrier) &&
+                        ` · ${carrierName(order.tracking_carrier)}`}
+                      {order.tracking_number &&
+                        (trackingUrl(order.tracking_carrier, order.tracking_number) ? (
+                          <>
+                            {" · "}
+                            <a
+                              href={
+                                trackingUrl(
+                                  order.tracking_carrier,
+                                  order.tracking_number,
+                                ) ?? undefined
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              className="link-underline text-slate"
+                            >
+                              Track {order.tracking_number}
+                            </a>
+                          </>
+                        ) : (
+                          ` · ${order.tracking_number}`
+                        ))}
+                    </p>
+                  )}
 
                   <ul className="mt-5 space-y-4">
                     {items.map((item, i) => (
@@ -416,7 +485,7 @@ export default async function AccountPage({ searchParams }: Props) {
       {/* -------------------------------------------------------------- Returns */}
       {returns && returns.length > 0 && (
         <section className="mt-16">
-          <h2 className="font-display text-3xl font-light text-graphite">
+          <h2 className="section-title text-graphite">
             Returns
           </h2>
           <div className="rule-gold mt-6" />
@@ -480,7 +549,7 @@ export default async function AccountPage({ searchParams }: Props) {
       {/* --------------------------------------------------------------- Ledger */}
       {ledger && ledger.length > 0 && (
         <section className="mt-16">
-          <h2 className="font-display text-3xl font-light text-graphite">
+          <h2 className="section-title text-graphite">
             Points activity
           </h2>
           <div className="rule-gold mt-6" />

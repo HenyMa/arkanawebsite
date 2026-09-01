@@ -65,7 +65,7 @@ export default async function AdminReturns({ searchParams }: Props) {
             className={`border px-3.5 py-1.5 text-xs transition-colors ${
               filter === f.value
                 ? "border-graphite bg-graphite text-bone"
-                : "border-sand text-slate hover:border-gold hover:bg-linen"
+                : "border-parchment text-slate hover:border-graphite hover:bg-linen"
             }`}
           >
             {f.label}

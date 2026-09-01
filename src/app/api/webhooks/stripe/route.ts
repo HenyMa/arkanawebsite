@@ -129,17 +129,13 @@ async function recordOrder(session: Stripe.Checkout.Session) {
 
   if (!userId) return; // Guest checkout — recorded, but no points to award.
 
-  // Burn the welcome discount now that it has actually been paid for. Only ever
-  // set, never cleared, and only if it isn't already set — so a member who
-  // somehow lands two discounted checkouts keeps the earlier timestamp.
+  // Burn whichever one-time perk this session carried, now that it has actually
+  // been paid for. The checkout route sets at most one of these.
   if (session.metadata?.welcome_discount === "1") {
-    const { error: burnError } = await supabase
-      .from("profiles")
-      .update({ welcome_discount_used_at: new Date().toISOString() })
-      .eq("id", userId)
-      .is("welcome_discount_used_at", null);
-
-    if (burnError) throw burnError;
+    await burnPerk(supabase, userId, "welcome_discount_used_at");
+  }
+  if (session.metadata?.second_order_discount === "1") {
+    await burnPerk(supabase, userId, "second_order_discount_used_at");
   }
 
   const { data: profile } = await supabase
@@ -168,6 +164,40 @@ async function recordOrder(session: Stripe.Checkout.Session) {
     .from("orders")
     .update({ points_awarded: points })
     .eq("id", order.id);
+}
+
+/**
+ * Marks a one-time member perk as spent.
+ *
+ * Only ever set, never cleared, and only if it isn't already set — so a member
+ * who somehow lands two discounted checkouts keeps the earlier timestamp and
+ * the perk stays burned exactly once.
+ *
+ * A missing column (42703 = undefined_column) means the schema is behind the
+ * code. That is logged rather than thrown, because throwing would return 500,
+ * and Stripe would then redeliver an event that can never succeed until someone
+ * re-runs the schema — retrying the *whole* order handler each time.
+ */
+async function burnPerk(
+  supabase: NonNullable<ReturnType<typeof createAdminClient>>,
+  userId: string,
+  column: "welcome_discount_used_at" | "second_order_discount_used_at",
+) {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ [column]: new Date().toISOString() })
+    .eq("id", userId)
+    .is(column, null);
+
+  if (!error) return;
+
+  if (error.code === "42703") {
+    console.warn(
+      `[webhook] profiles.${column} is missing; re-run supabase/schema.sql.`,
+    );
+    return;
+  }
+  throw error;
 }
 
 /**

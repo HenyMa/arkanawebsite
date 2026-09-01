@@ -35,15 +35,20 @@ export function welcomeDiscountCents(subtotalCents: number): number {
 }
 
 /**
- * Percentage off every order — not just the first — for Adept and Oracle
- * members, however they got there. Applied automatically at checkout.
+ * Percentage off a member's *second* order — a one-time perk, exactly like the
+ * welcome discount, and burned the same way once it has been paid for.
  *
- * Deliberately below WELCOME_DISCOUNT_PERCENT: the two can't stack (Stripe
- * Checkout takes one coupon per session), and the checkout route applies
- * whichever is worth more, so a member's first order still gets the bigger
- * welcome discount and this one takes over from the second order on.
+ * Two rates: everyone gets the base one, Adept and Oracle members get the
+ * higher one. `standing` decides which, so a tier that was bought outright is
+ * honoured identically to one that was spent into.
+ *
+ * These never compete with the welcome discount. That one is only offered on
+ * order zero and this one only on order one, so the two are mutually exclusive
+ * by construction — which matters, because Stripe Checkout accepts a single
+ * coupon per session and could not apply both anyway.
  */
-export const MEMBER_DISCOUNT_PERCENT = 10;
+export const SECOND_ORDER_DISCOUNT_PERCENT = 10;
+export const TIER_SECOND_ORDER_DISCOUNT_PERCENT = 20;
 
 /**
  * Tiers that can be bought outright, and what they cost.
@@ -82,8 +87,9 @@ export const TIERS: Tier[] = [
     perks: [
       "100 points the moment you join",
       `${WELCOME_DISCOUNT_PERCENT}% off your first order as a member`,
+      `${SECOND_ORDER_DISCOUNT_PERCENT}% off your second`,
       "1 point per dollar spent",
-      "Early access to every drop",
+      "A text the moment a drop lands",
     ],
   },
   {
@@ -91,10 +97,10 @@ export const TIERS: Tier[] = [
     thresholdCents: 30000,
     multiplier: 1.25,
     perks: [
-      `${MEMBER_DISCOUNT_PERCENT}% off every order`,
+      `${TIER_SECOND_ORDER_DISCOUNT_PERCENT}% off your second order`,
       "1.25 points per dollar spent",
       "Extended 60-day return window",
-      "First look at limited runs",
+      "The exclusive look, texted before it's announced",
     ],
   },
   {
@@ -102,12 +108,12 @@ export const TIERS: Tier[] = [
     thresholdCents: 75000,
     multiplier: 1.5,
     perks: [
-      `${MEMBER_DISCOUNT_PERCENT}% off every order`,
+      `${TIER_SECOND_ORDER_DISCOUNT_PERCENT}% off your second order`,
       "1.5 points per dollar spent",
       "Extended 60-day return window",
       "Free express shipping",
+      "The exclusive look, texted before it's announced",
       "Reserved sizing on limited runs",
-      "Invitations to private releases",
     ],
   },
 ];
@@ -136,30 +142,40 @@ export function standingCents(
 }
 
 /**
- * The lowest tier that carries the member discount. Derived rather than written
- * out, and falling back to unreachable rather than zero, so a rename in TIERS
- * can only ever withdraw the perk — never hand it to everyone.
+ * The lowest tier that counts as a paying member for perk purposes. Derived
+ * rather than written out, and falling back to unreachable rather than zero, so
+ * a rename in TIERS can only ever withdraw a perk — never hand it to everyone.
  */
-const MEMBER_DISCOUNT_FROM_CENTS =
+const TIER_MEMBER_FROM_CENTS =
   tierByName("Adept")?.thresholdCents ?? Number.POSITIVE_INFINITY;
 
-/** Whether a standing earns the member discount, ignoring the basket. */
-export function hasMemberDiscount(standing: number): boolean {
-  return standing >= MEMBER_DISCOUNT_FROM_CENTS;
+/** Whether a standing places a member in Adept or Oracle. */
+export function isTierMember(standing: number): boolean {
+  return standing >= TIER_MEMBER_FROM_CENTS;
+}
+
+/** The rate a given standing gets on its second order. */
+export function secondOrderDiscountPercent(standing: number): number {
+  return isTierMember(standing)
+    ? TIER_SECOND_ORDER_DISCOUNT_PERCENT
+    : SECOND_ORDER_DISCOUNT_PERCENT;
 }
 
 /**
- * The member discount on an order, in cents. Zero for anyone below Adept.
+ * The second-order discount on a basket, in cents.
  *
  * Being a percentage, it can never exceed the basket, so unlike a fixed amount
- * there is no minimum order to enforce.
+ * there is no minimum order to enforce. Eligibility — that this really is the
+ * member's second order, and that they haven't had it already — is decided in
+ * the checkout route, not here.
  */
-export function memberDiscountCents(
+export function secondOrderDiscountCents(
   standing: number,
   subtotalCents: number,
 ): number {
-  if (!hasMemberDiscount(standing)) return 0;
-  return Math.round((subtotalCents * MEMBER_DISCOUNT_PERCENT) / 100);
+  return Math.round(
+    (subtotalCents * secondOrderDiscountPercent(standing)) / 100,
+  );
 }
 
 /** Resolves the tier a member currently sits in from their lifetime spend. */

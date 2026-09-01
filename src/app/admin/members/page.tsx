@@ -9,6 +9,7 @@ type MemberRow = {
   points: number;
   lifetime_spend_cents: number;
   welcome_discount_used_at: string | null;
+  second_order_discount_used_at: string | null;
   purchased_tier: string | null;
   created_at: string;
 };
@@ -22,7 +23,7 @@ export default async function AdminMembers() {
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "id, email, full_name, points, lifetime_spend_cents, welcome_discount_used_at, purchased_tier, created_at",
+      "id, email, full_name, points, lifetime_spend_cents, welcome_discount_used_at, second_order_discount_used_at, purchased_tier, created_at",
     )
     .order("lifetime_spend_cents", { ascending: false })
     .limit(PAGE_SIZE);
@@ -84,10 +85,15 @@ export default async function AdminMembers() {
                 </span>
 
                 <span
-                  className="w-24 shrink-0 text-right text-xs text-ash"
-                  title="Whether the 20% welcome discount has been used"
+                  className="w-28 shrink-0 text-right text-xs text-ash"
+                  title="Which one-time discounts this member still has: 1st is the welcome discount, 2nd is the second-order discount"
                 >
-                  {member.welcome_discount_used_at ? "used 20%" : "20% unused"}
+                  {[
+                    member.welcome_discount_used_at ? null : "1st",
+                    member.second_order_discount_used_at ? null : "2nd",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "both used"}
                 </span>
               </li>
             );
